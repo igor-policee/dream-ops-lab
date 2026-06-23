@@ -53,6 +53,75 @@ an ad-hoc SSH port forward. Acceptable for a training environment.
 
 ---
 
+## 2026-06-24 — Internal domain dream.lab
+
+**Decision:** Use `dream.lab` as the internal domain for all platform services and VMs.
+
+**Reason:** No public domain available. `dream.lab` derives from the project name,
+is short and readable. `.local` is reserved for mDNS and avoided.
+
+**Alternatives considered:** `lab.internal`, `ops.lab`, `homelab.internal`.
+
+**Trade-offs:** Internal domain requires adding the step-ca root certificate to
+browsers and tools once. No public CA trust.
+
+---
+
+## 2026-06-24 — Two-tier DNS: Incus dnsmasq + CoreDNS with k8s_gateway
+
+**Decision:** Use two DNS servers with distinct roles:
+- Incus dnsmasq: authoritative for VM hostnames, auto-registered
+- CoreDNS + k8s_gateway plugin: authoritative for platform service names in K8s
+
+CoreDNS is exposed via Cilium LoadBalancer at a stable IP on incusbr0.
+Each server forwards queries it cannot answer to the other.
+
+**Reason:** Incus dnsmasq handles VM lifecycle automatically. k8s_gateway
+auto-registers DNS records when Gateway API resources are created — no manual
+DNS management. Single domain `dream.lab` spans both layers transparently.
+
+**Alternatives considered:**
+- Static hosts file — does not scale, manual management
+- External DNS server (separate VM) — adds unnecessary component
+- CoreDNS only — would not auto-register VM names from Incus
+
+**Trade-offs:** Two DNS servers must be aware of each other. CoreDNS depends on
+Kubernetes being available; VM name resolution via dnsmasq remains independent.
+
+---
+
+## 2026-06-24 — step-ca as dedicated Incus VM for internal PKI
+
+**Decision:** Run step-ca (Smallstep) as a standalone Incus VM (`step-ca-01`),
+independent of Kubernetes. It is the root CA for the entire platform.
+
+**Reason:** PKI must be available before Kubernetes exists and during cluster
+rebuilds. Running the CA inside K8s creates a circular dependency — the cluster
+cannot be bootstrapped or recovered if the CA is unavailable. A dedicated VM
+eliminates this dependency. step-ca supports ACME, allowing cert-manager and
+any other ACME client to request certificates without custom integrations.
+
+**Alternatives considered:** cert-manager self-signed ClusterIssuer inside K8s.
+
+**Trade-offs:** One additional VM to operate. step-ca-01 becomes a critical
+infrastructure dependency — its availability and backup must be maintained.
+
+---
+
+## 2026-06-24 — Numbered hostnames for all VMs
+
+**Decision:** All VMs use numbered hostnames (e.g., `step-ca-01`, `gitlab-01`,
+`talos-cp-01`) regardless of whether multiple replicas are expected.
+
+**Reason:** Consistent naming across the entire inventory. Avoids renaming if
+a second instance is ever added. DNS records and certificates are unambiguous.
+
+**Alternatives considered:** Non-numbered names for single-instance services.
+
+**Trade-offs:** Slightly more verbose, negligible in practice.
+
+---
+
 ## 2026-06-24 — ZFS over LVM thin pool for Incus storage
 
 **Decision:** Use a ZFS pool as the Incus storage backend. The pool is backed by a
@@ -80,6 +149,7 @@ negligible for a single-host lab. ZFS ARC memory usage is configurable.
 | Host configuration | Ansible |
 | VM provisioning | Terraform (incus provider, local Unix socket) |
 | GitLab configuration | Ansible (inside the GitLab VM) |
+| step-ca configuration | Ansible (inside the step-ca-01 VM) |
 | Kubernetes workloads | ArgoCD (GitOps, source in GitLab) |
 
 **Reason:** Each tool is used at the layer where it provides the most value. Ansible

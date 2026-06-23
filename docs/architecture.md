@@ -56,11 +56,13 @@ No remote API or TLS configuration required.
 
 | VM | Role |
 |----|------|
-| gitlab | GitLab CE — source control and CI/CD, outside Kubernetes |
-| talos-cp-* | Talos control plane nodes |
-| talos-w-* | Talos worker nodes |
+| step-ca-01 | Internal PKI / Certificate Authority — first to be provisioned |
+| gitlab-01 | GitLab CE — source control and CI/CD, outside Kubernetes |
+| talos-cp-01, talos-cp-02, talos-cp-03 | Talos control plane nodes |
+| talos-worker-01, talos-worker-N | Talos worker nodes |
 
-VM count and resource allocation per role to be decided in the Talos layer.
+All VMs use numbered hostnames regardless of expected replica count.
+VM resource allocation to be decided in the Talos layer.
 
 ### GitLab Runner
 
@@ -97,13 +99,48 @@ Internet
         ← reverse SSH tunnel (outbound from host, persistent via autossh + systemd)
               └── Physical Host (:22)
                     └── incusbr0 (10.10.0.0/24)
-                          └── Talos VMs
+                          └── Incus VMs
 ```
 
 Access pattern: SSH into the host via VPS reverse tunnel, then interact with all
 components (kubectl, talosctl, incus CLI) directly from the host.
 
 Ad-hoc local port forwarding is used when browser access to internal UIs is needed.
+
+## DNS and PKI
+
+### Internal domain
+
+All platform services use the internal domain `dream.lab`.
+
+### DNS architecture
+
+Two servers with distinct roles. See [network-diagram.md](network-diagram.md) for the
+full resolution flow.
+
+**Incus dnsmasq** (10.10.0.1, on incusbr0):
+- Authoritative for VM hostnames within `dream.lab` (auto-registered on VM start)
+- Forwards unresolved `dream.lab` queries to CoreDNS
+- Forwards all other queries upstream (router / internet)
+
+**CoreDNS** (stable IP via Cilium LoadBalancer, reachable from incusbr0):
+- Authoritative for platform service names in `dream.lab` via the `k8s_gateway` plugin
+- `k8s_gateway` watches Gateway API resources and auto-generates DNS records
+- Handles `*.cluster.local` for K8s internal service discovery
+- Forwards unresolved `dream.lab` queries to Incus dnsmasq (for VM names)
+
+### PKI
+
+step-ca runs as a dedicated Incus VM (`step-ca-01`). It is the root CA for the entire
+platform and is provisioned before any other VM.
+
+- Issues certificates via ACME protocol
+- cert-manager in Kubernetes uses step-ca as its ACME issuer
+- All platform services (GitLab, Talos, K8s ingress) receive certificates from step-ca
+- Wildcard certificate `*.dream.lab` used for platform UIs
+
+step-ca is independent of Kubernetes — certificates can be issued before the cluster
+exists and during cluster rebuilds.
 
 ## Automation Model
 
@@ -113,5 +150,6 @@ Ad-hoc local port forwarding is used when browser access to internal UIs is need
 | Host configuration | Ansible | Incus install, ZFS pool, bridge network, autossh service |
 | VM provisioning | Terraform | Incus VMs, Talos machine configs |
 | GitLab configuration | Ansible | GitLab CE install and configuration inside the GitLab VM |
+| step-ca configuration | Ansible | step-ca install and configuration inside the step-ca-01 VM |
 | Kubernetes workloads | ArgoCD (GitOps) | Platform services, applications |
 

@@ -28,6 +28,13 @@ Bottom-up architecture discussion completed through the Incus layer.
 9. **GitLab** — CE, standalone Incus VM outside Kubernetes
 10. **GitLab Runner** — inside Kubernetes, Kubernetes executor
 
+**DNS and PKI layer (2026-06-24):**
+11. **Domain** — `dream.lab` (internal only)
+12. **DNS** — Incus dnsmasq (VM names) + CoreDNS + k8s_gateway (platform services)
+13. **PKI** — step-ca as dedicated Incus VM (`step-ca-01`), ACME issuer for cert-manager
+14. **Certificates** — wildcard `*.dream.lab` from step-ca
+15. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
+
 See [decisions.md](decisions.md) for full rationale on each choice.
 
 ## Next Steps
