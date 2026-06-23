@@ -1,6 +1,6 @@
 # dream-ops-lab
 
-A modern DevSecOps platform built for hands-on training and experimentation.
+A modern DevSecOps platform designed for hands-on experimentation and engineering solution exploration.
 
 ## Goal
 
