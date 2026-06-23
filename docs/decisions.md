@@ -1,5 +1,87 @@
 # Decisions
 
+## 2026-06-24 — OpenTofu over Terraform for infrastructure provisioning
+
+**Decision:** Use OpenTofu instead of HashiCorp Terraform.
+
+**Reason:** HashiCorp changed Terraform's license from MPL to BSL (Business Source
+License) in August 2023 — the same move made with Vault. BSL is not open source by
+the OSI definition and restricts commercial use in competing products. OpenTofu is the
+Linux Foundation fork of Terraform under the original MPL license, maintained by the
+community. It is API and configuration-compatible with Terraform; all providers,
+modules, and tooling work without changes.
+
+**Alternatives considered:** HashiCorp Terraform.
+
+**Trade-offs:** OpenTofu is slightly behind Terraform on bleeding-edge features but
+covers all required functionality. Community and ecosystem are growing rapidly.
+
+---
+
+## 2026-06-24 — Single Kubernetes control plane node
+
+**Decision:** Deploy one control plane node (talos-cp-01) instead of three.
+
+**Reason:** All VMs run on a single physical host. Three control plane nodes would
+provide no real high availability — if the host goes down, all nodes go down
+simultaneously. A single CP node saves ~8 GB RAM and 4 vCPU for worker workloads.
+
+**Alternatives considered:** 3-node HA control plane.
+
+**Trade-offs:** No control plane redundancy. Acceptable for a single-host lab.
+
+---
+
+## 2026-06-24 — Platform services stack
+
+**Decision:** The following services run inside Kubernetes, managed by ArgoCD.
+
+| Category | Solution |
+|----------|----------|
+| Secrets | OpenBao (open-source Vault fork, MPL license) |
+| Policy | Kyverno |
+| Runtime security | Tetragon (eBPF, Cilium ecosystem) |
+| Image scanning | Trivy |
+| Metrics | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
+| Logs | Loki |
+| Traces | Tempo |
+| Telemetry collection | OpenTelemetry Collector |
+| Network observability | Cilium Hubble |
+| Object storage | MinIO (S3-compatible) |
+| Streaming | Strimzi (Kafka operator) |
+| Batch processing | Spark Operator |
+| PostgreSQL | CloudNativePG (CNPG) |
+| ClickHouse | Altinity clickhouse-operator |
+| GPU | NVIDIA GPU Operator |
+
+**Reason:** Each tool is selected as the most modern, K8s-native solution in its
+category. The stack forms a complete base platform enabling DevSecOps, AI/ML (GPU),
+and big data workloads.
+
+**Key rationale per component:**
+
+- **OpenBao** — HashiCorp Vault changed to BSL (non-OSS) in 2023. OpenBao is the
+  Linux Foundation fork under MPL, API-compatible with Vault.
+- **Kyverno** — K8s-native policies as YAML resources, no separate language required.
+- **Tetragon** — eBPF-based runtime security from the Cilium team; integrates
+  natively with Cilium's network layer already in use.
+- **kube-prometheus-stack** — industry standard, PromQL is a universally applicable
+  skill, richer ecosystem than alternatives.
+- **MinIO** — de facto standard S3-compatible object storage for self-hosted K8s;
+  used by Loki, Tempo, Spark, ML frameworks, and more.
+- **Strimzi** — mature Kafka operator, the standard for Kafka on K8s.
+- **CloudNativePG** — CNCF project, the most modern K8s-native PostgreSQL operator.
+- **Altinity clickhouse-operator** — de facto standard for ClickHouse on K8s.
+
+**Alternatives considered:**
+- VictoriaMetrics over Prometheus — lighter but less standard; Prometheus chosen
+  for wider ecosystem and learning value.
+- HashiCorp Vault — BSL license excludes it from open-source use cases.
+- OPA/Gatekeeper — more powerful but steeper learning curve; Kyverno preferred.
+- Falco — mature but kernel-module based; Tetragon preferred for eBPF coherence.
+
+---
+
 ## 2026-06-23 — Incus as hypervisor over libvirt/KVM stack
 
 **Decision:** Use Incus to manage VMs on the physical host. Remove libvirt, libvirtd,
@@ -7,7 +89,7 @@ and virt-manager. Retain kvm kernel module and qemu-kvm (Incus uses them directl
 
 **Reason:** Incus provides a modern, unified API for both VMs and containers, aligns
 with the immutable/API-driven philosophy of the platform, and has cleaner integration
-with Talos provisioning via Terraform.
+with Talos provisioning via OpenTofu.
 
 **Alternatives considered:** Keep existing KVM/libvirt stack.
 
@@ -139,7 +221,7 @@ negligible for a single-host lab. ZFS ARC memory usage is configurable.
 
 ---
 
-## 2026-06-24 — Automation model: manual → Ansible → Terraform → ArgoCD
+## 2026-06-24 — Automation model: manual → Ansible → OpenTofu → ArgoCD
 
 **Decision:** Divide automation responsibility across four layers with no overlap.
 
@@ -147,16 +229,16 @@ negligible for a single-host lab. ZFS ARC memory usage is configurable.
 |-------|------|
 | Host OS install | Manual |
 | Host configuration | Ansible |
-| VM provisioning | Terraform (incus provider, local Unix socket) |
+| VM provisioning | OpenTofu (incus provider, local Unix socket) |
 | GitLab configuration | Ansible (inside the GitLab VM) |
 | step-ca configuration | Ansible (inside the step-ca-01 VM) |
 | Kubernetes workloads | ArgoCD (GitOps, source in GitLab) |
 
 **Reason:** Each tool is used at the layer where it provides the most value. Ansible
-is idempotent and appropriate for host-level config. Terraform manages declarative
+is idempotent and appropriate for host-level config. OpenTofu manages declarative
 infrastructure resources. ArgoCD provides GitOps continuous reconciliation inside K8s.
 
-**Alternatives considered:** Shell scripts for host config; Terraform for everything.
+**Alternatives considered:** Shell scripts for host config; OpenTofu for everything.
 
 **Trade-offs:** Requires familiarity with three tools, but each layer is independently
 operable and testable.
@@ -184,7 +266,7 @@ VM isolates its resource usage from the cluster.
 
 **Reason:** Application pipelines (image builds, tests, K8s deployments) are the
 primary Runner workload. These run naturally as pods inside the cluster. Cluster
-infrastructure management (Terraform, Ansible, talosctl) is performed directly from
+infrastructure management (OpenTofu, Ansible, talosctl) is performed directly from
 the host, not through GitLab pipelines.
 
 **Alternatives considered:** Dedicated runner VM outside K8s.

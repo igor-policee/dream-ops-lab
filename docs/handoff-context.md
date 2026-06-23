@@ -23,8 +23,8 @@ Bottom-up architecture discussion completed through the Incus layer.
 **Incus layer (2026-06-24):**
 5. **Incus install** — Zabbly repository
 6. **Storage** — ZFS pool on LVM LV (~828 GB from ubuntu-vg)
-7. **Terraform integration** — local Unix socket, no remote API
-8. **Automation model** — manual → Ansible → Terraform → ArgoCD
+7. **OpenTofu integration** — local Unix socket, no remote API
+8. **Automation model** — manual → Ansible → OpenTofu → ArgoCD
 9. **GitLab** — CE, standalone Incus VM outside Kubernetes
 10. **GitLab Runner** — inside Kubernetes, Kubernetes executor
 
@@ -35,15 +35,26 @@ Bottom-up architecture discussion completed through the Incus layer.
 14. **Certificates** — wildcard `*.dream.lab` from step-ca
 15. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
 
+**Platform services layer (2026-06-24):**
+16. **K8s topology** — single control plane (talos-cp-01), N workers
+17. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
+18. **Secrets** — OpenBao
+19. **Policy** — Kyverno
+20. **Runtime security** — Tetragon
+21. **Image scanning** — Trivy
+22. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
+23. **Object storage** — MinIO
+24. **Streaming** — Strimzi (Kafka)
+25. **Batch processing** — Spark Operator
+26. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
+
 See [decisions.md](decisions.md) for full rationale on each choice.
 
 ## Next Steps
 
-Continue architecture discussion bottom-up:
-
-- [ ] Talos layer — VM topology, resource allocation, disk layout, cluster config
-- [ ] Kubernetes layer — Cilium config, Gateway API, add-ons
-- [ ] Platform services — storage, secrets, policy, observability, security scanning
+- [ ] Talos layer — VM resource allocation, disk layout, cluster config, GPU passthrough
+- [ ] Kubernetes layer — Cilium config, Gateway API, cert-manager, ArgoCD bootstrap
+- [ ] Infrastructure implementation — Ansible playbooks, OpenTofu modules
 
 ## Risks and Constraints
 

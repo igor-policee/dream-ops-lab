@@ -25,11 +25,21 @@ machine using an immutable, API-driven infrastructure philosophy.
 | VM OS | Talos Linux |
 | Kubernetes | v1.35.x |
 | CNI | Cilium (eBPF, kube-proxy replacement) |
-| Provisioning | Terraform + Ansible |
+| Provisioning | OpenTofu + Ansible |
 | Source control / CI | GitLab CE |
 | GitOps | ArgoCD |
 | Internal domain | dream.lab |
 | PKI | step-ca (internal CA, ACME) |
+| Secrets | OpenBao |
+| Policy | Kyverno |
+| Runtime security | Tetragon |
+| Image scanning | Trivy |
+| Observability | kube-prometheus-stack + Loki + Tempo + OTel Collector + Hubble |
+| Object storage | MinIO |
+| Databases | CloudNativePG (PostgreSQL) · Altinity (ClickHouse) |
+| Streaming | Strimzi (Kafka) |
+| Batch processing | Spark Operator |
+| GPU | NVIDIA GPU Operator (RTX 3070 Ti) |
 
 ## Documentation
 

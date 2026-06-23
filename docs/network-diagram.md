@@ -14,8 +14,6 @@ Physical Host (homelab-ubuntu)
       ├── 10.10.0.10   step-ca-01
       ├── 10.10.0.11   gitlab-01
       ├── 10.10.0.20   talos-cp-01
-      ├── 10.10.0.21   talos-cp-02
-      ├── 10.10.0.22   talos-cp-03
       ├── 10.10.0.30   talos-worker-01
       ├── 10.10.0.3x   talos-worker-N
       │

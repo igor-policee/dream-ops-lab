@@ -47,9 +47,9 @@ ubuntu-vg (~828 GB free)
               └── Incus VM volumes
 ```
 
-### Terraform integration
+### OpenTofu integration
 
-Terraform manages Incus resources via the incus provider using a local Unix socket.
+OpenTofu manages Incus resources via the incus provider using a local Unix socket.
 No remote API or TLS configuration required.
 
 ### VM inventory
@@ -58,8 +58,8 @@ No remote API or TLS configuration required.
 |----|------|
 | step-ca-01 | Internal PKI / Certificate Authority — first to be provisioned |
 | gitlab-01 | GitLab CE — source control and CI/CD, outside Kubernetes |
-| talos-cp-01, talos-cp-02, talos-cp-03 | Talos control plane nodes |
-| talos-worker-01, talos-worker-N | Talos worker nodes |
+| talos-cp-01 | Kubernetes control plane (single node — single physical host) |
+| talos-worker-01..N | Kubernetes worker nodes |
 
 All VMs use numbered hostnames regardless of expected replica count.
 VM resource allocation to be decided in the Talos layer.
@@ -67,7 +67,7 @@ VM resource allocation to be decided in the Talos layer.
 ### GitLab Runner
 
 Runs inside Kubernetes as a pod (Kubernetes executor). Handles application
-pipelines: image builds, tests, deployments. Cluster infrastructure (Terraform,
+pipelines: image builds, tests, deployments. Cluster infrastructure (OpenTofu,
 Ansible, talosctl) is managed from the host directly, not through GitLab pipelines.
 
 ## Networking
@@ -142,13 +142,44 @@ platform and is provisioned before any other VM.
 step-ca is independent of Kubernetes — certificates can be issued before the cluster
 exists and during cluster rebuilds.
 
+## Platform Services (Kubernetes)
+
+### Hardware
+
+| Component | Detail |
+|-----------|--------|
+| GPU | NVIDIA RTX 3070 Ti (PCI passthrough via Incus to worker VM) |
+
+### Service catalogue
+
+| Category | Solution |
+|----------|----------|
+| GitOps | ArgoCD |
+| Certificates | cert-manager (ACME → step-ca-01) |
+| Secrets | OpenBao |
+| Policy | Kyverno |
+| Runtime security | Tetragon |
+| Image scanning | Trivy |
+| Metrics | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
+| Logs | Loki |
+| Traces | Tempo |
+| Telemetry collection | OpenTelemetry Collector |
+| Network observability | Cilium Hubble (included with Cilium) |
+| Object storage | MinIO |
+| Streaming | Strimzi (Kafka operator) |
+| Batch processing | Spark Operator |
+| PostgreSQL | CloudNativePG (CNPG) |
+| ClickHouse | Altinity clickhouse-operator |
+| GPU | NVIDIA GPU Operator |
+| GitLab Runner | Kubernetes executor (pod-based) |
+
 ## Automation Model
 
 | Layer | Tool | Scope |
 |-------|------|-------|
 | Host OS | Manual | Ubuntu install, SSH keys, base user setup |
 | Host configuration | Ansible | Incus install, ZFS pool, bridge network, autossh service |
-| VM provisioning | Terraform | Incus VMs, Talos machine configs |
+| VM provisioning | OpenTofu | Incus VMs, Talos machine configs |
 | GitLab configuration | Ansible | GitLab CE install and configuration inside the GitLab VM |
 | step-ca configuration | Ansible | step-ca install and configuration inside the step-ca-01 VM |
 | Kubernetes workloads | ArgoCD (GitOps) | Platform services, applications |
