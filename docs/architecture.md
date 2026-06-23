@@ -54,15 +54,18 @@ No remote API or TLS configuration required.
 
 ### VM inventory
 
-| VM | Role |
-|----|------|
-| step-ca-01 | Internal PKI / Certificate Authority — first to be provisioned |
-| gitlab-01 | GitLab CE — source control and CI/CD, outside Kubernetes |
-| talos-cp-01 | Kubernetes control plane (single node — single physical host) |
-| talos-worker-01..N | Kubernetes worker nodes |
+| VM | vCPU | RAM | Disk | Role |
+|----|------|-----|------|------|
+| step-ca-01 | 1 | 1 GB | 10 GB | Internal PKI / Certificate Authority — first to be provisioned |
+| gitlab-01 | 4 | 8 GB | 100 GB | GitLab CE — source control and CI/CD, outside Kubernetes |
+| talos-cp-01 | 2 | 4 GB | 100 GB | Kubernetes control plane (single node — single physical host) |
+| talos-worker-01 | 6 | 20 GB | 200 GB | Platform services |
+| talos-worker-02 | 6 | 20 GB | 200 GB | Platform services |
+| talos-worker-gpu-01 | 2 | 8 GB | 50 GB | GPU workloads (RTX 3070 Ti passthrough) |
+| **Total** | **21** | **61 GB** | **660 GB** | |
 
-All VMs use numbered hostnames regardless of expected replica count.
-VM resource allocation to be decided in the Talos layer.
+Host budget: 64 GB RAM (3 GB OS reserve), ~828 GB disk (168 GB free), 16 threads.
+vCPU overcommit is intentional and acceptable for a lab environment.
 
 ### GitLab Runner
 

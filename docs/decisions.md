@@ -18,6 +18,31 @@ covers all required functionality. Community and ecosystem are growing rapidly.
 
 ---
 
+## 2026-06-24 — VM resource allocation
+
+**Decision:** Allocate resources as follows:
+
+| VM | vCPU | RAM | Disk |
+|----|------|-----|------|
+| step-ca-01 | 1 | 1 GB | 10 GB |
+| gitlab-01 | 4 | 8 GB | 100 GB |
+| talos-cp-01 | 2 | 4 GB | 100 GB |
+| talos-worker-01 | 6 | 20 GB | 200 GB |
+| talos-worker-02 | 6 | 20 GB | 200 GB |
+| talos-worker-gpu-01 | 2 | 8 GB | 50 GB |
+
+GPU worker uses a distinct naming prefix (`talos-worker-gpu-*`) to distinguish it
+from general-purpose workers.
+
+**Reason:** Two general workers provide capacity for the full platform services stack.
+GPU worker is intentionally minimal — GPU compute dominates; CPU/RAM are auxiliary.
+Resources can be rebalanced when GPU workloads are introduced.
+
+**Trade-offs:** 21 vCPUs on 16 physical threads — acceptable overcommit for a lab.
+Total RAM 61 GB leaves a 3 GB OS reserve on the 64 GB host.
+
+---
+
 ## 2026-06-24 — Single Kubernetes control plane node
 
 **Decision:** Deploy one control plane node (talos-cp-01) instead of three.

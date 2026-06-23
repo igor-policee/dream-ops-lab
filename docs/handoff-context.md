@@ -35,24 +35,27 @@ Bottom-up architecture discussion completed through the Incus layer.
 14. **Certificates** — wildcard `*.dream.lab` from step-ca
 15. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
 
+**Talos layer (2026-06-24):**
+16. **K8s topology** — single control plane (talos-cp-01), 2 general workers + 1 GPU worker
+17. **VM resources** — step-ca-01 (1/1GB/10GB), gitlab-01 (4/8GB/100GB), talos-cp-01 (2/4GB/100GB), talos-worker-01/02 (6/20GB/200GB), talos-worker-gpu-01 (2/8GB/50GB)
+
 **Platform services layer (2026-06-24):**
-16. **K8s topology** — single control plane (talos-cp-01), N workers
-17. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
-18. **Secrets** — OpenBao
-19. **Policy** — Kyverno
-20. **Runtime security** — Tetragon
-21. **Image scanning** — Trivy
-22. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
-23. **Object storage** — MinIO
-24. **Streaming** — Strimzi (Kafka)
-25. **Batch processing** — Spark Operator
-26. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
+18. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
+19. **Secrets** — OpenBao
+20. **Policy** — Kyverno
+21. **Runtime security** — Tetragon
+22. **Image scanning** — Trivy
+23. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
+24. **Object storage** — MinIO
+25. **Streaming** — Strimzi (Kafka)
+26. **Batch processing** — Spark Operator
+27. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
 
 See [decisions.md](decisions.md) for full rationale on each choice.
 
 ## Next Steps
 
-- [ ] Talos layer — VM resource allocation, disk layout, cluster config, GPU passthrough
+- [ ] Roadmap — implementation phases and sequencing
 - [ ] Kubernetes layer — Cilium config, Gateway API, cert-manager, ArgoCD bootstrap
 - [ ] Infrastructure implementation — Ansible playbooks, OpenTofu modules
 

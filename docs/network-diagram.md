@@ -15,7 +15,8 @@ Physical Host (homelab-ubuntu)
       ├── 10.10.0.11   gitlab-01
       ├── 10.10.0.20   talos-cp-01
       ├── 10.10.0.30   talos-worker-01
-      ├── 10.10.0.3x   talos-worker-N
+      ├── 10.10.0.31   talos-worker-02
+      ├── 10.10.0.40   talos-worker-gpu-01
       │
       └── 10.10.0.53   CoreDNS (Cilium LoadBalancer IP, stable)
 ```
