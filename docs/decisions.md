@@ -18,6 +18,77 @@ covers all required functionality. Community and ecosystem are growing rapidly.
 
 ---
 
+## 2026-06-24 — OpenBao as standalone Incus VM outside Kubernetes
+
+**Decision:** Run OpenBao as a dedicated Incus VM (`openbao-01`), independent of
+Kubernetes, provisioned before the cluster.
+
+**Reason:** OpenBao stores operational secrets required to bootstrap and recover
+Kubernetes (Talos machine configs, kubeconfig, API tokens). Running it inside K8s
+creates a circular dependency — the cluster cannot be bootstrapped or recovered if
+the secrets store is unavailable. The same reasoning applies as for step-ca-01.
+openbao-01 serves both operational secrets and application secrets for K8s workloads.
+
+**Alternatives considered:** OpenBao inside Kubernetes as a Helm chart.
+
+**Trade-offs:** One additional VM to operate. openbao-01 and step-ca-01 are both
+critical pre-K8s dependencies — their availability and backup must be maintained.
+
+---
+
+## 2026-06-24 — Container registry: GitLab Container Registry
+
+**Decision:** Use the built-in GitLab Container Registry on gitlab-01. No separate
+registry service.
+
+**Reason:** GitLab CE includes a container registry that integrates natively with
+GitLab CI/CD pipelines. Images built in pipelines are pushed directly without
+additional configuration. Trivy handles image scanning independently in the pipeline.
+Adding Harbor would duplicate functionality without meaningful benefit for a
+single-team, single-GitLab setup.
+
+**Alternatives considered:** Harbor — CNCF graduated registry with built-in Trivy
+scanning, image signing (Cosign), proxy cache, and multi-tenancy. Harbor is the
+right choice when multiple CI/CD systems share a registry, when proxy caching of
+public registries is needed, or when air-gapped operation is required.
+
+**Trade-offs:** GitLab registry lacks proxy caching and image signing. Acceptable
+for a lab; Harbor can replace it if requirements grow.
+
+---
+
+## 2026-06-24 — OpenTofu state backend: GitLab HTTP backend
+
+**Decision:** Store OpenTofu state in GitLab's built-in HTTP backend.
+
+**Reason:** GitLab CE provides a Terraform/OpenTofu HTTP state backend out of the
+box. It supports state locking and versioning, requires no additional infrastructure,
+and keeps state alongside the code under the same access control model as GitLab.
+
+**Alternatives considered:**
+- MinIO S3 backend — requires separate locking mechanism; adds complexity.
+- Local file — not shareable, no locking, lost on machine failure.
+
+**Trade-offs:** State depends on GitLab availability. Acceptable since gitlab-01 is
+a standalone VM independent of Kubernetes.
+
+---
+
+## 2026-06-24 — Operational secrets in OpenBao
+
+**Decision:** All operational secrets (Talos machine configs, kubeconfig, Ansible
+sensitive vars, API tokens) are stored in OpenBao. Nothing is stored in Git or on disk.
+
+**Reason:** Centralises secret management. OpenBao provides audit logs, TTL-based
+leases, AppRole auth, and fine-grained access policies. Consistent with the platform's
+use of OpenBao for application secrets.
+
+**Trade-offs:** OpenBao must be available to bootstrap or recover infrastructure.
+step-ca-01 is provisioned first, OpenBao is provisioned early in the K8s cluster
+bootstrap sequence.
+
+---
+
 ## 2026-06-24 — VM resource allocation
 
 **Decision:** Allocate resources as follows:
@@ -25,21 +96,23 @@ covers all required functionality. Community and ecosystem are growing rapidly.
 | VM | vCPU | RAM | Disk |
 |----|------|-----|------|
 | step-ca-01 | 1 | 1 GB | 10 GB |
-| gitlab-01 | 4 | 8 GB | 100 GB |
+| openbao-01 | 1 | 2 GB | 20 GB |
+| gitlab-01 | 4 | 6 GB | 200 GB |
 | talos-cp-01 | 2 | 4 GB | 100 GB |
-| talos-worker-01 | 6 | 20 GB | 200 GB |
-| talos-worker-02 | 6 | 20 GB | 200 GB |
-| talos-worker-gpu-01 | 2 | 8 GB | 50 GB |
+| talos-worker-01 | 6 | 18 GB | 200 GB |
+| talos-worker-02 | 6 | 18 GB | 200 GB |
+| talos-worker-gpu-01 | 2 | 6 GB | 50 GB |
 
 GPU worker uses a distinct naming prefix (`talos-worker-gpu-*`) to distinguish it
 from general-purpose workers.
 
 **Reason:** Two general workers provide capacity for the full platform services stack.
 GPU worker is intentionally minimal — GPU compute dominates; CPU/RAM are auxiliary.
+gitlab-01 disk increased to 200 GB to accommodate the Container Registry.
 Resources can be rebalanced when GPU workloads are introduced.
 
-**Trade-offs:** 21 vCPUs on 16 physical threads — acceptable overcommit for a lab.
-Total RAM 61 GB leaves a 3 GB OS reserve on the 64 GB host.
+**Trade-offs:** 22 vCPUs on 16 physical threads — acceptable overcommit for a lab.
+Total RAM 55 GB leaves a 9 GB OS reserve on the 64 GB host.
 
 ---
 

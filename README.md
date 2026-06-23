@@ -28,6 +28,8 @@ machine using an immutable, API-driven infrastructure philosophy.
 | Provisioning | OpenTofu + Ansible |
 | Source control / CI | GitLab CE |
 | GitOps | ArgoCD |
+| Container registry | GitLab Container Registry |
+| State backend | GitLab HTTP backend (OpenTofu state) |
 | Internal domain | dream.lab |
 | PKI | step-ca (internal CA, ACME) |
 | Secrets | OpenBao |

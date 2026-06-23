@@ -12,7 +12,8 @@ Physical Host (homelab-ubuntu)
       │
       ├── 10.10.0.1    host bridge IP / Incus dnsmasq
       ├── 10.10.0.10   step-ca-01
-      ├── 10.10.0.11   gitlab-01
+      ├── 10.10.0.11   openbao-01
+      ├── 10.10.0.12   gitlab-01
       ├── 10.10.0.20   talos-cp-01
       ├── 10.10.0.30   talos-worker-01
       ├── 10.10.0.31   talos-worker-02
@@ -49,7 +50,8 @@ Client (host or VM)
   └── resolv.conf: 10.10.0.1
         │
         ├── step-ca-01.dream.lab?   → Incus dnsmasq knows → 10.10.0.10
-        ├── gitlab-01.dream.lab?    → Incus dnsmasq knows → 10.10.0.11
+        ├── openbao-01.dream.lab?  → Incus dnsmasq knows → 10.10.0.11
+        ├── gitlab-01.dream.lab?   → Incus dnsmasq knows → 10.10.0.12
         ├── talos-cp-01.dream.lab?  → Incus dnsmasq knows → 10.10.0.20
         │
         ├── argocd.dream.lab?      → dnsmasq forwards → CoreDNS (10.10.0.53)
@@ -69,8 +71,8 @@ Pod
         ├── argocd.dream.lab?      → k8s_gateway → Gateway LB IP
         ├── grafana.dream.lab?     → k8s_gateway → Gateway LB IP
         │
-        ├── gitlab-01.dream.lab?    → CoreDNS forwards → Incus dnsmasq (10.10.0.1)
-        │     └── dnsmasq knows    → 10.10.0.11
+        ├── gitlab-01.dream.lab?   → CoreDNS forwards → Incus dnsmasq (10.10.0.1)
+        │     └── dnsmasq knows   → 10.10.0.12
         │
         └── google.com?            → CoreDNS forwards upstream → internet
 ```
@@ -96,6 +98,9 @@ step-ca-01 (10.10.0.10)
         │     └── ACME → step-ca-01
         │           └── issues certs for platform UIs (*.dream.lab)
         │
+        ├── openbao-01
+        │     └── ACME → step-ca-01 → openbao-01.dream.lab cert
+        │
         ├── gitlab-01
         │     └── ACME → step-ca-01 → gitlab-01.dream.lab cert
         │
@@ -113,6 +118,7 @@ The root cert is added to the trust store once per client machine.
 | Service | DNS name | Resolved by |
 |---------|----------|-------------|
 | GitLab | gitlab-01.dream.lab | Incus dnsmasq |
+| OpenBao | openbao-01.dream.lab | Incus dnsmasq |
 | ArgoCD | argocd.dream.lab | CoreDNS / k8s_gateway |
 | Grafana | grafana.dream.lab | CoreDNS / k8s_gateway |
 | step-ca | step-ca-01.dream.lab | Incus dnsmasq |

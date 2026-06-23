@@ -56,15 +56,16 @@ No remote API or TLS configuration required.
 
 | VM | vCPU | RAM | Disk | Role |
 |----|------|-----|------|------|
-| step-ca-01 | 1 | 1 GB | 10 GB | Internal PKI / Certificate Authority — first to be provisioned |
-| gitlab-01 | 4 | 8 GB | 100 GB | GitLab CE — source control and CI/CD, outside Kubernetes |
-| talos-cp-01 | 2 | 4 GB | 100 GB | Kubernetes control plane (single node — single physical host) |
-| talos-worker-01 | 6 | 20 GB | 200 GB | Platform services |
-| talos-worker-02 | 6 | 20 GB | 200 GB | Platform services |
-| talos-worker-gpu-01 | 2 | 8 GB | 50 GB | GPU workloads (RTX 3070 Ti passthrough) |
-| **Total** | **21** | **61 GB** | **660 GB** | |
+| step-ca-01 | 1 | 1 GB | 10 GB | Internal PKI / CA — provisioned first |
+| openbao-01 | 1 | 2 GB | 20 GB | Secrets management — provisioned before K8s |
+| gitlab-01 | 4 | 6 GB | 200 GB | GitLab CE + Container Registry |
+| talos-cp-01 | 2 | 4 GB | 100 GB | Kubernetes control plane (single node) |
+| talos-worker-01 | 6 | 18 GB | 200 GB | Platform services |
+| talos-worker-02 | 6 | 18 GB | 200 GB | Platform services |
+| talos-worker-gpu-01 | 2 | 6 GB | 50 GB | GPU workloads (RTX 3070 Ti passthrough) |
+| **Total** | **22** | **55 GB** | **780 GB** | |
 
-Host budget: 64 GB RAM (3 GB OS reserve), ~828 GB disk (168 GB free), 16 threads.
+Host budget: 64 GB RAM (9 GB reserve), ~828 GB disk (48 GB free), 16 threads.
 vCPU overcommit is intentional and acceptable for a lab environment.
 
 ### GitLab Runner
@@ -159,7 +160,7 @@ exists and during cluster rebuilds.
 |----------|----------|
 | GitOps | ArgoCD |
 | Certificates | cert-manager (ACME → step-ca-01) |
-| Secrets | OpenBao |
+| Secrets (K8s workloads) | OpenBao (served from openbao-01 VM) |
 | Policy | Kyverno |
 | Runtime security | Tetragon |
 | Image scanning | Trivy |
@@ -175,6 +176,35 @@ exists and during cluster rebuilds.
 | ClickHouse | Altinity clickhouse-operator |
 | GPU | NVIDIA GPU Operator |
 | GitLab Runner | Kubernetes executor (pod-based) |
+| Container registry | GitLab Container Registry (built into gitlab-01) |
+
+## Operational Data
+
+### OpenTofu state
+
+Stored in GitLab's built-in HTTP backend. Supports locking and versioning.
+State lives alongside the code in GitLab, access controlled via GitLab tokens.
+
+```hcl
+terraform {
+  backend "http" {
+    address        = "https://gitlab.dream.lab/api/v4/projects/<id>/terraform/state/<name>"
+    lock_address   = "https://gitlab.dream.lab/api/v4/projects/<id>/terraform/state/<name>/lock"
+    unlock_address = "https://gitlab.dream.lab/api/v4/projects/<id>/terraform/state/<name>/lock"
+  }
+}
+```
+
+### Operational secrets
+
+All operational secrets are stored in OpenBao. No secrets are stored in Git or on disk.
+
+| Data | Storage |
+|------|---------|
+| Talos secrets (PKI, machine configs) | OpenBao |
+| kubeconfig | OpenBao |
+| Ansible sensitive variables | OpenBao |
+| GitLab tokens, API keys | OpenBao |
 
 ## Automation Model
 
@@ -185,5 +215,6 @@ exists and during cluster rebuilds.
 | VM provisioning | OpenTofu | Incus VMs, Talos machine configs |
 | GitLab configuration | Ansible | GitLab CE install and configuration inside the GitLab VM |
 | step-ca configuration | Ansible | step-ca install and configuration inside the step-ca-01 VM |
+| OpenBao configuration | Ansible | OpenBao install and configuration inside the openbao-01 VM |
 | Kubernetes workloads | ArgoCD (GitOps) | Platform services, applications |
 

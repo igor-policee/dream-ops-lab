@@ -37,10 +37,14 @@ Bottom-up architecture discussion completed through the Incus layer.
 
 **Talos layer (2026-06-24):**
 16. **K8s topology** — single control plane (talos-cp-01), 2 general workers + 1 GPU worker
-17. **VM resources** — step-ca-01 (1/1GB/10GB), gitlab-01 (4/8GB/100GB), talos-cp-01 (2/4GB/100GB), talos-worker-01/02 (6/20GB/200GB), talos-worker-gpu-01 (2/8GB/50GB)
+17. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01/02 (6/18GB/200GB), talos-worker-gpu-01 (2/6GB/50GB). Total: 55 GB RAM, 9 GB reserve.
 
 **Platform services layer (2026-06-24):**
-18. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
+18. **OpenBao** — standalone Incus VM (openbao-01), outside K8s, pre-K8s infrastructure
+19. **Container registry** — GitLab Container Registry (built into gitlab-01)
+20. **OpenTofu state** — GitLab HTTP backend (built-in, locking + versioning)
+21. **Operational secrets** — OpenBao (Talos configs, kubeconfig, tokens)
+21. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
 19. **Secrets** — OpenBao
 20. **Policy** — Kyverno
 21. **Runtime security** — Tetragon
