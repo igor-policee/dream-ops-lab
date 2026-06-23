@@ -36,8 +36,8 @@ Bottom-up architecture discussion completed through the Incus layer.
 15. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
 
 **Talos layer (2026-06-24):**
-16. **K8s topology** — single control plane (talos-cp-01), 2 general workers + 1 GPU worker
-17. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01/02 (6/18GB/200GB), talos-worker-gpu-01 (2/6GB/50GB). Total: 55 GB RAM, 9 GB reserve.
+16. **K8s topology** — single control plane (talos-cp-01), 1 general worker + 1 GPU worker
+17. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01 (6/20GB/200GB), talos-worker-gpu-01 (6/20GB/200GB). Total: 53 GB RAM, 11 GB reserve.
 
 **Platform services layer (2026-06-24):**
 18. **OpenBao** — standalone Incus VM (openbao-01), outside K8s, pre-K8s infrastructure

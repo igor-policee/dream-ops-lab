@@ -87,7 +87,7 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 2.2 Provision Talos VMs
 - Provision talos-cp-01 via OpenTofu (Talos ISO image)
-- Provision talos-worker-01, talos-worker-02 via OpenTofu
+- Provision talos-worker-01, talos-worker-gpu-01 via OpenTofu
 - Apply machine configs via talosctl
 
 ### 2.3 Bootstrap cluster

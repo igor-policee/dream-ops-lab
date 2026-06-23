@@ -99,20 +99,22 @@ bootstrap sequence.
 | openbao-01 | 1 | 2 GB | 20 GB |
 | gitlab-01 | 4 | 6 GB | 200 GB |
 | talos-cp-01 | 2 | 4 GB | 100 GB |
-| talos-worker-01 | 6 | 18 GB | 200 GB |
-| talos-worker-02 | 6 | 18 GB | 200 GB |
-| talos-worker-gpu-01 | 2 | 6 GB | 50 GB |
+| talos-worker-01 | 6 | 20 GB | 200 GB |
+| talos-worker-gpu-01 | 6 | 20 GB | 200 GB |
 
-GPU worker uses a distinct naming prefix (`talos-worker-gpu-*`) to distinguish it
-from general-purpose workers.
+talos-worker-gpu-01 runs the full platform services workload alongside GPU jobs.
+The `-gpu` suffix in the name signals that the node has GPU resources available
+via PCI passthrough and the NVIDIA GPU Operator.
 
-**Reason:** Two general workers provide capacity for the full platform services stack.
-GPU worker is intentionally minimal — GPU compute dominates; CPU/RAM are auxiliary.
-gitlab-01 disk increased to 200 GB to accommodate the Container Registry.
-Resources can be rebalanced when GPU workloads are introduced.
+**Reason:** A single dedicated GPU-only VM with minimal CPU/RAM (the original
+2 vCPU / 6 GB design) creates a bottleneck — GPU workloads (ML training, inference)
+require CPU and RAM for data loading and preprocessing. Merging the GPU node with a
+full-size worker gives it sufficient general compute while keeping the GPU accessible.
+Two workers instead of three reduces VM count without meaningful loss of capacity on
+a single physical host, where an extra worker node provides no real resilience benefit.
 
-**Trade-offs:** 22 vCPUs on 16 physical threads — acceptable overcommit for a lab.
-Total RAM 55 GB leaves a 9 GB OS reserve on the 64 GB host.
+**Trade-offs:** 20 vCPUs on 16 physical threads — acceptable overcommit for a lab.
+Total RAM 53 GB leaves an 11 GB OS reserve on the 64 GB host.
 
 ---
 

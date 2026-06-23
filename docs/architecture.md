@@ -60,12 +60,11 @@ No remote API or TLS configuration required.
 | openbao-01 | 1 | 2 GB | 20 GB | Secrets management — provisioned before K8s |
 | gitlab-01 | 4 | 6 GB | 200 GB | GitLab CE + Container Registry |
 | talos-cp-01 | 2 | 4 GB | 100 GB | Kubernetes control plane (single node) |
-| talos-worker-01 | 6 | 18 GB | 200 GB | Platform services |
-| talos-worker-02 | 6 | 18 GB | 200 GB | Platform services |
-| talos-worker-gpu-01 | 2 | 6 GB | 50 GB | GPU workloads (RTX 3070 Ti passthrough) |
-| **Total** | **22** | **55 GB** | **780 GB** | |
+| talos-worker-01 | 6 | 20 GB | 200 GB | Platform services |
+| talos-worker-gpu-01 | 6 | 20 GB | 200 GB | Platform services + GPU workloads (RTX 3070 Ti passthrough) |
+| **Total** | **20** | **53 GB** | **730 GB** | |
 
-Host budget: 64 GB RAM (9 GB reserve), ~828 GB disk (48 GB free), 16 threads.
+Host budget: 64 GB RAM (11 GB reserve), ~828 GB disk (98 GB free), 16 threads.
 vCPU overcommit is intentional and acceptable for a lab environment.
 
 ### GitLab Runner
