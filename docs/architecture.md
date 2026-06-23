@@ -29,6 +29,45 @@ Incus replaces libvirt. The kvm kernel module and qemu-kvm are retained — used
 
 Current state: libvirt fully installed and running, 4 VMs active. Must be shut down and removed before Incus installation.
 
+## Incus
+
+### Installation
+
+Installed from the Zabbly repository (maintained by the original LXD/Incus author).
+
+### Storage
+
+ZFS pool backed by a dedicated LVM logical volume carved from the free space in
+ubuntu-vg (~828 GB). Incus manages the ZFS pool directly.
+
+```
+ubuntu-vg (~828 GB free)
+  └── incus-zfs LV (block device)
+        └── ZFS pool: incus-pool
+              └── Incus VM volumes
+```
+
+### Terraform integration
+
+Terraform manages Incus resources via the incus provider using a local Unix socket.
+No remote API or TLS configuration required.
+
+### VM inventory
+
+| VM | Role |
+|----|------|
+| gitlab | GitLab CE — source control and CI/CD, outside Kubernetes |
+| talos-cp-* | Talos control plane nodes |
+| talos-w-* | Talos worker nodes |
+
+VM count and resource allocation per role to be decided in the Talos layer.
+
+### GitLab Runner
+
+Runs inside Kubernetes as a pod (Kubernetes executor). Handles application
+pipelines: image builds, tests, deployments. Cluster infrastructure (Terraform,
+Ansible, talosctl) is managed from the host directly, not through GitLab pipelines.
+
 ## Networking
 
 ### Constraint
@@ -44,7 +83,7 @@ Incus internal bridge with NAT:
 wlp5s0 (WiFi, 192.168.1.100/24, uplink to router)
   └── incusbr0 (Linux bridge, 10.10.0.0/24)
         ├── NAT → wlp5s0 (outbound internet for VMs)
-        └── Talos VMs (static IPs within 10.10.0.0/24)
+        └── Incus VMs (static IPs within 10.10.0.0/24)
 ```
 
 VMs have outbound internet access via NAT. Inbound access is handled by the
@@ -65,4 +104,14 @@ Access pattern: SSH into the host via VPS reverse tunnel, then interact with all
 components (kubectl, talosctl, incus CLI) directly from the host.
 
 Ad-hoc local port forwarding is used when browser access to internal UIs is needed.
+
+## Automation Model
+
+| Layer | Tool | Scope |
+|-------|------|-------|
+| Host OS | Manual | Ubuntu install, SSH keys, base user setup |
+| Host configuration | Ansible | Incus install, ZFS pool, bridge network, autossh service |
+| VM provisioning | Terraform | Incus VMs, Talos machine configs |
+| GitLab configuration | Ansible | GitLab CE install and configuration inside the GitLab VM |
+| Kubernetes workloads | ArgoCD (GitOps) | Platform services, applications |
 

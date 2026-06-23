@@ -10,14 +10,23 @@ installed and active. 4 VMs currently running on libvirt — must be stopped and
 before Incus installation. ~828 GB free in the Ubuntu LVM VG — to be used as Incus
 storage pool. Windows dual-boot on nvme0n1 — do not touch.
 
-## What Was Decided (2026-06-23)
+## What Was Decided
 
-Bottom-up architecture discussion completed through the networking layer:
+Bottom-up architecture discussion completed through the Incus layer.
 
+**Networking layer (2026-06-23):**
 1. **Host OS** — Ubuntu 24.04 LTS retained, no reinstall
 2. **Hypervisor** — Incus replaces libvirt stack
 3. **VM networking** — incusbr0 bridge, 10.10.0.0/24, NAT to wlan0
 4. **Remote access** — reverse SSH tunnel to VPS via autossh + systemd
+
+**Incus layer (2026-06-24):**
+5. **Incus install** — Zabbly repository
+6. **Storage** — ZFS pool on LVM LV (~828 GB from ubuntu-vg)
+7. **Terraform integration** — local Unix socket, no remote API
+8. **Automation model** — manual → Ansible → Terraform → ArgoCD
+9. **GitLab** — CE, standalone Incus VM outside Kubernetes
+10. **GitLab Runner** — inside Kubernetes, Kubernetes executor
 
 See [decisions.md](decisions.md) for full rationale on each choice.
 
@@ -25,10 +34,9 @@ See [decisions.md](decisions.md) for full rationale on each choice.
 
 Continue architecture discussion bottom-up:
 
-- [ ] Incus layer — network config details, storage pools, VM templates
-- [ ] Talos layer — VM topology, disk layout, cluster config
+- [ ] Talos layer — VM topology, resource allocation, disk layout, cluster config
 - [ ] Kubernetes layer — Cilium config, Gateway API, add-ons
-- [ ] Platform services — storage, GitOps, CI/CD, secrets, policy, observability, security
+- [ ] Platform services — storage, secrets, policy, observability, security scanning
 
 ## Risks and Constraints
 

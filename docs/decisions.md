@@ -53,6 +53,77 @@ an ad-hoc SSH port forward. Acceptable for a training environment.
 
 ---
 
+## 2026-06-24 — ZFS over LVM thin pool for Incus storage
+
+**Decision:** Use a ZFS pool as the Incus storage backend. The pool is backed by a
+dedicated LVM logical volume created from the free space in ubuntu-vg (~828 GB).
+
+**Reason:** ZFS provides instant snapshots, copy-on-write cloning, and `zfs send/recv`
+— all directly useful in a lab where VMs are frequently snapshotted, cloned from
+templates, or reset to a clean state. LVM thin pool offers similar features but with
+a significantly worse tooling experience.
+
+**Alternatives considered:** LVM thin pool using the existing ubuntu-vg directly.
+
+**Trade-offs:** ZFS-on-LVM adds a second storage layer. Performance overhead is
+negligible for a single-host lab. ZFS ARC memory usage is configurable.
+
+---
+
+## 2026-06-24 — Automation model: manual → Ansible → Terraform → ArgoCD
+
+**Decision:** Divide automation responsibility across four layers with no overlap.
+
+| Layer | Tool |
+|-------|------|
+| Host OS install | Manual |
+| Host configuration | Ansible |
+| VM provisioning | Terraform (incus provider, local Unix socket) |
+| GitLab configuration | Ansible (inside the GitLab VM) |
+| Kubernetes workloads | ArgoCD (GitOps, source in GitLab) |
+
+**Reason:** Each tool is used at the layer where it provides the most value. Ansible
+is idempotent and appropriate for host-level config. Terraform manages declarative
+infrastructure resources. ArgoCD provides GitOps continuous reconciliation inside K8s.
+
+**Alternatives considered:** Shell scripts for host config; Terraform for everything.
+
+**Trade-offs:** Requires familiarity with three tools, but each layer is independently
+operable and testable.
+
+---
+
+## 2026-06-24 — GitLab CE as a standalone Incus VM outside Kubernetes
+
+**Decision:** Run GitLab CE in a dedicated Incus VM, not inside Kubernetes.
+
+**Reason:** GitLab is the GitOps source of truth for ArgoCD. Running it inside the
+cluster it manages creates a bootstrap dependency — the cluster cannot self-heal or
+be rebuilt if GitLab is unavailable. A standalone VM eliminates this circular dependency.
+
+**Alternatives considered:** GitLab inside Kubernetes.
+
+**Trade-offs:** One additional VM to maintain. GitLab CE is resource-heavy; dedicated
+VM isolates its resource usage from the cluster.
+
+---
+
+## 2026-06-24 — GitLab Runner inside Kubernetes (Kubernetes executor)
+
+**Decision:** Run GitLab Runner as a pod inside Kubernetes using the Kubernetes executor.
+
+**Reason:** Application pipelines (image builds, tests, K8s deployments) are the
+primary Runner workload. These run naturally as pods inside the cluster. Cluster
+infrastructure management (Terraform, Ansible, talosctl) is performed directly from
+the host, not through GitLab pipelines.
+
+**Alternatives considered:** Dedicated runner VM outside K8s.
+
+**Trade-offs:** Runner is unavailable if the cluster is down. Acceptable because
+infrastructure pipelines are not routed through GitLab Runner.
+
+---
+
 ## 2026-06-23 — Ubuntu 24.04 LTS as host OS
 
 **Decision:** Retain existing Ubuntu 24.04 LTS installation. No reinstall needed.
