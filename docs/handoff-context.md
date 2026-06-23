@@ -59,9 +59,18 @@ See [decisions.md](decisions.md) for full rationale on each choice.
 
 ## Next Steps
 
-- [ ] Roadmap — implementation phases and sequencing
-- [ ] Kubernetes layer — Cilium config, Gateway API, cert-manager, ArgoCD bootstrap
-- [ ] Infrastructure implementation — Ansible playbooks, OpenTofu modules
+Architecture discussion complete. Implementation begins with Phase 0.
+See [roadmap.md](roadmap.md) for full phase breakdown.
+
+- [ ] Phase 0 — Host preparation (Ansible: Incus, ZFS, networking, autossh)
+- [ ] Phase 1 — Pre-K8s VMs (step-ca-01, openbao-01, gitlab-01)
+- [ ] Phase 2 — Kubernetes cluster (talos nodes, bootstrap)
+- [ ] Phase 3 — K8s core (Cilium, CoreDNS, cert-manager, ArgoCD)
+- [ ] Phase 4 — Security and policy
+- [ ] Phase 5 — Observability
+- [ ] Phase 6 — Data platform
+- [ ] Phase 7 — GPU workloads
+- [ ] Phase 8 — Optional (AmneziaWG, image signing, hardening)
 
 ## Risks and Constraints
 
