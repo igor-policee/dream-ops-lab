@@ -88,7 +88,7 @@ the next begins. Order within a phase is sequential where noted.
 - Install `age` on host
 - Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
 - Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
-- Create backup directories on dev-ubuntu-01: `~/backups/dream-ops-lab/{step-ca,openbao,tfstate}`
+- Create backup directories on dev-ubuntu-01: `~/backups/dream-ops-lab/{step-ca,openbao,gitlab,tfstate}`
 - Create dedicated OpenBao backup token with `sys/storage/raft/snapshot` policy
 - Deploy backup script to host at `/usr/local/bin/dream-ops-backup.sh`
 - Deploy systemd service (`dream-ops-backup.service`) and timer (`dream-ops-backup.timer`)

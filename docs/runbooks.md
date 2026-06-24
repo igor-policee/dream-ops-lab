@@ -20,8 +20,9 @@ Physical Host (when running)
   └── OpenTofu state → terraform.tfstate (bootstrap phase only)
         ↓ encrypted with age (asymmetric, public key on host)
 dev-ubuntu-01 ~/backups/dream-ops-lab/
-  ├── step-ca/    ← .tar.gz.age files, last 7 retained
-  ├── openbao/    ← .snap.age files, last 7 retained
+  ├── step-ca/    ← .tar.gz.age files, last 3 retained
+  ├── openbao/    ← .snap.age files, last 3 retained
+  ├── gitlab/     ← .tar.gz.age files, last 3 retained
   └── tfstate/    ← .tfstate.age files, last 3 retained
 
 Bitwarden (recovery credentials, stored once, do not change)
@@ -64,7 +65,7 @@ backup script) lives on the host — it cannot be used to decrypt.
 **On dev-ubuntu-01:**
 
 ```bash
-mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,tfstate}
+mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab,tfstate}
 ```
 
 ---
@@ -117,6 +118,30 @@ else
     log "OpenBao is sealed or unreachable — skipping snapshot."
 fi
 
+# --- GitLab ---
+if incus exec gitlab-01 -- test -f /etc/gitlab/gitlab.rb 2>/dev/null; then
+    log "Backing up GitLab..."
+    incus exec gitlab-01 -- gitlab-backup create STRATEGY=copy 2>/dev/null
+    GITLAB_BACKUP=$(incus exec gitlab-01 -- \
+        ls -t /var/opt/gitlab/backups/*.tar 2>/dev/null | head -1)
+    if [ -n "${GITLAB_BACKUP}" ]; then
+        incus file pull "gitlab-01${GITLAB_BACKUP}" "${TMPDIR}/gitlab-backup.tar"
+        incus file pull gitlab-01/etc/gitlab/gitlab-secrets.json \
+            "${TMPDIR}/gitlab-secrets.json"
+        incus file pull gitlab-01/etc/gitlab/gitlab.rb "${TMPDIR}/gitlab.rb"
+        tar -czf "${TMPDIR}/gitlab-bundle.tar.gz" -C "${TMPDIR}" \
+            gitlab-backup.tar gitlab-secrets.json gitlab.rb
+        age -r "${AGE_PUBKEY}" -o "${TMPDIR}/gitlab-${DATE}.tar.gz.age" \
+            "${TMPDIR}/gitlab-bundle.tar.gz"
+        rsync "${TMPDIR}/gitlab-${DATE}.tar.gz.age" \
+            "${BACKUP_HOST}:${BACKUP_BASE}/gitlab/"
+        incus exec gitlab-01 -- rm -f "${GITLAB_BACKUP}"
+        log "GitLab backup done."
+    fi
+else
+    log "gitlab-01 not running — skipping."
+fi
+
 # --- OpenTofu state (bootstrap phase only) ---
 TFSTATE_PATH="/opt/infra/terraform.tfstate"
 if [ -f "${TFSTATE_PATH}" ]; then
@@ -128,11 +153,13 @@ if [ -f "${TFSTATE_PATH}" ]; then
     log "tfstate backup done."
 fi
 
-# --- Retention on dev-ubuntu-01 ---
+# --- Retention on dev-ubuntu-01 (keep 3 most recent per type) ---
 ssh "${BACKUP_HOST}" \
-    "ls -t ${BACKUP_BASE}/step-ca/*.age 2>/dev/null | tail -n +8 | xargs -r rm -f"
+    "ls -t ${BACKUP_BASE}/step-ca/*.age 2>/dev/null | tail -n +4 | xargs -r rm -f"
 ssh "${BACKUP_HOST}" \
-    "ls -t ${BACKUP_BASE}/openbao/*.age 2>/dev/null | tail -n +8 | xargs -r rm -f"
+    "ls -t ${BACKUP_BASE}/openbao/*.age 2>/dev/null | tail -n +4 | xargs -r rm -f"
+ssh "${BACKUP_HOST}" \
+    "ls -t ${BACKUP_BASE}/gitlab/*.age 2>/dev/null | tail -n +4 | xargs -r rm -f"
 ssh "${BACKUP_HOST}" \
     "ls -t ${BACKUP_BASE}/tfstate/*.age 2>/dev/null | tail -n +4 | xargs -r rm -f"
 
@@ -276,6 +303,36 @@ age -d -i /tmp/age-backup.key -o terraform.tfstate terraform-YYYYMMDD.tfstate.ag
 # Place at the expected path and run: tofu init && tofu plan
 ```
 
+#### Restore GitLab from backup
+
+```bash
+# Decrypt the bundle
+age -d -i /tmp/age-backup.key -o gitlab-bundle.tar.gz gitlab-YYYYMMDD.tar.gz.age
+
+# Unpack
+mkdir -p /tmp/gitlab-restore
+tar -xzf gitlab-bundle.tar.gz -C /tmp/gitlab-restore
+
+# Push data backup into a freshly provisioned gitlab-01 VM
+incus file push /tmp/gitlab-restore/gitlab-backup.tar \
+    gitlab-01/var/opt/gitlab/backups/gitlab-backup.tar
+incus exec gitlab-01 -- chown git:git /var/opt/gitlab/backups/gitlab-backup.tar
+
+# Restore config files (required before running gitlab-restore)
+incus file push /tmp/gitlab-restore/gitlab-secrets.json \
+    gitlab-01/etc/gitlab/gitlab-secrets.json
+incus file push /tmp/gitlab-restore/gitlab.rb \
+    gitlab-01/etc/gitlab/gitlab.rb
+
+# Run restore (GitLab service must be stopped first)
+incus exec gitlab-01 -- gitlab-ctl stop puma
+incus exec gitlab-01 -- gitlab-ctl stop sidekiq
+incus exec gitlab-01 -- gitlab-backup restore BACKUP=gitlab-backup
+incus exec gitlab-01 -- gitlab-ctl reconfigure
+incus exec gitlab-01 -- gitlab-ctl start
+incus exec gitlab-01 -- gitlab-rake gitlab:check SANITIZE=true
+```
+
 ---
 
 ### Recovery Priority Order
@@ -314,6 +371,6 @@ Automated daily snapshots for critical VMs:
 ```bash
 for vm in step-ca-01 openbao-01; do
     incus config set $vm snapshots.schedule "0 2 * * *"
-    incus config set $vm snapshots.expiry 7d
+    incus config set $vm snapshots.expiry 3d
 done
 ```

@@ -82,7 +82,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
 | roadmap.md | Current — Phase 1.5 backup setup added, local→GitLab state path documented |
 | decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
-| runbooks.md | Current — full backup/recovery with age + dev-ubuntu-01 + Bitwarden |
+| runbooks.md | Current — GitLab backup added, retention 3 days everywhere, full recovery procedures |
 | handoff-context.md | Current |
 
 ## Risks and Constraints
@@ -93,7 +93,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | Single physical host | No hardware redundancy; acceptable for training environment |
 | DPI filtering (RU) | WireGuard may be blocked; reverse SSH used instead; AmneziaWG deferred |
 | KVM stack migration | libvirt removal must not break existing qemu-kvm before Incus is ready |
-| SSD failure — no full backup strategy | **Not yet planned.** Current backup covers only critical secrets and VM config snapshots. Full data loss (host SSD or VM disk failure) is unmitigated. Must be planned before Phase 0 starts. |
+| SSD failure | GitLab data backed up to dev-ubuntu-01 (automated, 3-day retention). All other VM data (PostgreSQL, ClickHouse, MinIO, Kafka) is synthetic/educational and recreatable from scratch. Talos OS layer is stateless and rebuilt from configs stored in OpenBao. Risk accepted for training environment. |
 
 ## Validation Status
 
