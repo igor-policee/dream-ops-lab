@@ -221,8 +221,8 @@ exists and during cluster rebuilds.
 ### OpenTofu state
 
 During bootstrap (Phase 1, before GitLab is available), state is stored locally on the
-host using the `local` backend. The state file is included in the automated off-site
-backup rotation to dev-ubuntu-01.
+host using the `local` backend. The state file is backed up manually to dev-ubuntu-01
+after each `tofu apply` until migration to GitLab in Phase 1.4.
 
 After gitlab-01 is operational (end of Phase 1.4), state is migrated to GitLab's
 built-in HTTP backend via `tofu init -migrate-state`. This backend supports locking

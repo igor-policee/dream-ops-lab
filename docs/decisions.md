@@ -442,9 +442,10 @@ host boot); at worst, the previous backup is used for recovery.
 ## 2026-06-24 — OpenTofu state: local backend during bootstrap, then GitLab HTTP
 
 **Decision:** Use the `local` backend for OpenTofu state during Phase 1 (while
-gitlab-01 does not yet exist). Include the state file in the automated backup
-rotation to dev-ubuntu-01. After gitlab-01 is operational, migrate state to the
-GitLab HTTP backend via `tofu init -migrate-state`.
+gitlab-01 does not yet exist). Back up the state file manually to dev-ubuntu-01
+after each `tofu apply` until migration (see "Manual tfstate Backup" in runbooks.md).
+After gitlab-01 is operational, migrate state to the GitLab HTTP backend via
+`tofu init -migrate-state`.
 
 **Reason:** The GitLab HTTP backend is not available until gitlab-01 is provisioned
 (Phase 1.4). Using gitlab.com as a temporary backend introduces an external SaaS
