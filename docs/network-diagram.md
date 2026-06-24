@@ -48,9 +48,9 @@ directly from the host. Ad-hoc port forwarding for browser access to platform UI
 Client (host or VM)
   └── resolv.conf: 10.10.0.1
         │
-        ├── step-ca-01.dream.lab?   → Incus dnsmasq knows → 10.10.0.10
-        ├── openbao-01.dream.lab?  → Incus dnsmasq knows → 10.10.0.11
-        ├── gitlab-01.dream.lab?   → Incus dnsmasq knows → 10.10.0.12
+        ├── step-ca.dream.lab?     → Incus dnsmasq knows (static alias) → 10.10.0.10
+        ├── openbao.dream.lab?     → Incus dnsmasq knows (static alias) → 10.10.0.11
+        ├── gitlab.dream.lab?      → Incus dnsmasq knows (static alias) → 10.10.0.12
         ├── talos-cp-01.dream.lab?  → Incus dnsmasq knows → 10.10.0.20
         │
         ├── argocd.dream.lab?      → dnsmasq forwards → CoreDNS (10.10.0.53)
@@ -70,8 +70,8 @@ Pod
         ├── argocd.dream.lab?      → k8s_gateway → Gateway LB IP
         ├── grafana.dream.lab?     → k8s_gateway → Gateway LB IP
         │
-        ├── gitlab-01.dream.lab?   → CoreDNS forwards → Incus dnsmasq (10.10.0.1)
-        │     └── dnsmasq knows   → 10.10.0.12
+        ├── gitlab.dream.lab?      → CoreDNS forwards → Incus dnsmasq (10.10.0.1)
+        │     └── dnsmasq knows   → 10.10.0.12 (static alias)
         │
         └── google.com?            → CoreDNS forwards upstream → internet
 ```
@@ -98,10 +98,10 @@ step-ca-01 (10.10.0.10)
         │           └── issues certs for platform UIs (*.dream.lab)
         │
         ├── openbao-01
-        │     └── ACME → step-ca-01 → openbao-01.dream.lab cert
+        │     └── ACME → step-ca-01 → openbao.dream.lab cert
         │
         ├── gitlab-01
-        │     └── ACME → step-ca-01 → gitlab-01.dream.lab cert
+        │     └── ACME → step-ca-01 → gitlab.dream.lab cert
         │
         └── Talos nodes (if TLS required)
               └── ACME → step-ca-01
@@ -114,11 +114,15 @@ The root cert is added to the trust store once per client machine.
 
 ## Platform service DNS names (examples)
 
-| Service | DNS name | Resolved by |
-|---------|----------|-------------|
-| GitLab | gitlab-01.dream.lab | Incus dnsmasq |
-| OpenBao | openbao-01.dream.lab | Incus dnsmasq |
-| ArgoCD | argocd.dream.lab | CoreDNS / k8s_gateway |
-| Grafana | grafana.dream.lab | CoreDNS / k8s_gateway |
-| step-ca | step-ca-01.dream.lab | Incus dnsmasq |
-| K8s API | talos-cp-01.dream.lab | Incus dnsmasq |
+Service DNS names use no numeric suffix. VM hostnames (with suffix) are also
+resolvable but are used only for direct VM access (SSH, incus exec), not in
+application config, certificates, or URLs.
+
+| Service | DNS name | VM hostname | Resolved by |
+|---------|----------|-------------|-------------|
+| GitLab | gitlab.dream.lab | gitlab-01.dream.lab | Incus dnsmasq (static alias) |
+| OpenBao | openbao.dream.lab | openbao-01.dream.lab | Incus dnsmasq (static alias) |
+| step-ca | step-ca.dream.lab | step-ca-01.dream.lab | Incus dnsmasq (static alias) |
+| ArgoCD | argocd.dream.lab | — | CoreDNS / k8s_gateway |
+| Grafana | grafana.dream.lab | — | CoreDNS / k8s_gateway |
+| K8s API | talos-cp-01.dream.lab | talos-cp-01.dream.lab | Incus dnsmasq (hostname only) |

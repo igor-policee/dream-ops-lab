@@ -88,8 +88,12 @@ the next begins. Order within a phase is sequential where noted.
 - Trigger manual run and verify encrypted files appear on dev-ubuntu-01
 
 ### 1.6 Configure DNS
-- Configure Incus dnsmasq to serve `dream.lab` for VM hostnames
-- Verify host resolves `step-ca-01.dream.lab`, `gitlab-01.dream.lab`, etc.
+- Configure Incus dnsmasq to serve `dream.lab` for VM hostnames (auto-registered as `<hostname>.dream.lab`)
+- Add static service aliases in dnsmasq — service DNS names use no numbers:
+  - `gitlab.dream.lab` → `gitlab-01`
+  - `step-ca.dream.lab` → `step-ca-01`
+  - `openbao.dream.lab` → `openbao-01`
+- Verify both resolve: `gitlab-01.dream.lab` (VM hostname) and `gitlab.dream.lab` (service name)
 
 ---
 
@@ -129,8 +133,11 @@ Order is strict within this phase.
 ### 3.2 Configure DNS
 - Install CoreDNS with k8s_gateway plugin (Helm)
 - Configure k8s_gateway to serve Gateway API resources as DNS records
+- Create `CiliumLoadBalancerIPPool` reserving 10.10.0.53 for CoreDNS
+- Create `CiliumL2AnnouncementPolicy` to advertise LoadBalancer IPs on incusbr0
 - Expose CoreDNS via Cilium LoadBalancer at stable IP (10.10.0.53)
 - Update Incus dnsmasq: forward `dream.lab` → 10.10.0.53
+- Verify 10.10.0.53 is reachable from host: `dig @10.10.0.53 argocd.dream.lab`
 - Verify pod DNS resolution for `dream.lab` and `cluster.local`
 
 ### 3.3 Install cert-manager
@@ -156,8 +163,11 @@ Order is strict within this phase.
 **Tooling:** ArgoCD
 
 ### 4.1 External Secrets Operator
+- Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
+- Create bootstrap K8s secret with AppRole credentials:
+  `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
 - Deploy External Secrets Operator
-- Create ClusterSecretStore pointing to openbao-01
+- Create ClusterSecretStore pointing to openbao-01 using the bootstrap secret
 - Verify secret sync with a test ExternalSecret
 
 ### 4.2 Kyverno
@@ -184,30 +194,35 @@ Order is strict within this phase.
 
 **Tooling:** ArgoCD
 
-### 5.1 kube-prometheus-stack
+### 5.1 MinIO
+- Deploy MinIO (standalone mode)
+- Create buckets: loki, tempo, spark, data
+- Configure lifecycle policies
+
+### 5.2 kube-prometheus-stack
 - Deploy Prometheus + Alertmanager + Grafana
 - Configure scraping for all platform components
 - Import baseline K8s dashboards
 
-### 5.2 Loki
+### 5.3 Loki
 - Deploy Loki
 - Deploy Promtail / OTel Collector as log forwarder on each node
-- Configure MinIO as Loki storage backend (after Phase 6.1)
+- Configure MinIO as Loki storage backend
 
-### 5.3 Tempo
+### 5.4 Tempo
 - Deploy Tempo
-- Configure MinIO as Tempo storage backend (after Phase 6.1)
+- Configure MinIO as Tempo storage backend
 
-### 5.4 OpenTelemetry Collector
+### 5.5 OpenTelemetry Collector
 - Deploy OTel Collector as DaemonSet
 - Configure pipelines: metrics → Prometheus, logs → Loki, traces → Tempo
 
-### 5.5 Hubble
+### 5.6 Hubble
 - Enable Hubble UI (included with Cilium)
 - Expose via Gateway API
 - Verify network flow visibility
 
-### 5.6 Grafana datasources
+### 5.7 Grafana datasources
 - Configure Prometheus, Loki, Tempo datasources
 - Create unified dashboards for platform health
 
@@ -217,28 +232,22 @@ Order is strict within this phase.
 
 **Tooling:** ArgoCD
 
-### 6.1 MinIO
-- Deploy MinIO (standalone mode)
-- Create buckets: loki, tempo, spark, data
-- Configure lifecycle policies
-- Update Loki and Tempo to use MinIO backend
-
-### 6.2 CloudNativePG
+### 6.1 CloudNativePG
 - Deploy CloudNativePG operator
 - Create initial PostgreSQL cluster (3-instance HA)
 - Configure backups to MinIO
 
-### 6.3 ClickHouse
+### 6.2 ClickHouse
 - Deploy Altinity clickhouse-operator
 - Create initial ClickHouse cluster
 - Configure backups to MinIO
 
-### 6.4 Strimzi (Kafka)
+### 6.3 Strimzi (Kafka)
 - Deploy Strimzi operator
-- Create Kafka cluster (3 brokers, 3 ZooKeeper / KRaft mode)
+- Create Kafka cluster (3 brokers, KRaft mode)
 - Create initial topics
 
-### 6.5 Spark Operator
+### 6.4 Spark Operator
 - Deploy Spark Operator
 - Run test SparkApplication to verify cluster connectivity
 

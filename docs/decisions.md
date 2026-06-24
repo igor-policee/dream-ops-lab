@@ -290,6 +290,32 @@ infrastructure dependency — its availability and backup must be maintained.
 
 ---
 
+## 2026-06-24 — Service DNS names carry no numeric suffix
+
+**Decision:** DNS names used in application config, certificates, and URLs do not
+include the numeric VM suffix. VM hostnames (with suffix) are resolvable but used
+only for direct VM access.
+
+| VM hostname | Service DNS name |
+|-------------|-----------------|
+| gitlab-01 | gitlab.dream.lab |
+| step-ca-01 | step-ca.dream.lab |
+| openbao-01 | openbao.dream.lab |
+
+Implemented via static aliases in Incus dnsmasq (CNAME or address records).
+
+**Reason:** A numbered DNS name leaks infrastructure topology into application
+config, certificates, and OpenTofu backends. If a VM is replaced or renamed, all
+references must be updated. A stable service name decouples the service identity
+from the VM instance.
+
+**Alternatives considered:** Use the numbered hostname everywhere — simpler, but
+creates coupling between service identity and VM naming.
+
+**Trade-offs:** Requires explicit alias entries in dnsmasq config.
+
+---
+
 ## 2026-06-24 — Numbered hostnames for all VMs
 
 **Decision:** All VMs use numbered hostnames (e.g., `step-ca-01`, `gitlab-01`,

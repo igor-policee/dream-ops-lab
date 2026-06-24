@@ -141,14 +141,35 @@ full resolution flow.
 
 **Incus dnsmasq** (10.10.0.1, on incusbr0):
 - Authoritative for VM hostnames within `dream.lab` (auto-registered on VM start)
+- Hosts static service aliases for standalone VMs (see naming convention below)
 - Forwards unresolved `dream.lab` queries to CoreDNS
+- Returns NXDOMAIN for unknown `dream.lab` names — does not forward back to CoreDNS
 - Forwards all other queries upstream (router / internet)
 
 **CoreDNS** (stable IP via Cilium LoadBalancer, reachable from incusbr0):
 - Authoritative for platform service names in `dream.lab` via the `k8s_gateway` plugin
 - `k8s_gateway` watches Gateway API resources and auto-generates DNS records
 - Handles `*.cluster.local` for K8s internal service discovery
-- Forwards unresolved `dream.lab` queries to Incus dnsmasq (for VM names)
+- Forwards VM hostname queries to Incus dnsmasq (for VM names)
+- Returns NXDOMAIN for unknown `dream.lab` names — does not forward back to dnsmasq
+
+**Loop prevention:** each server is terminal for names it cannot resolve. Neither
+server forwards a `dream.lab` query it received via forwarding back to the other.
+This prevents infinite loops for non-existent names.
+
+### DNS naming convention
+
+VM hostnames use a numeric suffix (`gitlab-01`, `step-ca-01`). DNS service names
+used in URLs, certificates, and application config do not:
+
+| VM hostname | Service DNS name | Resolved by |
+|-------------|-----------------|-------------|
+| gitlab-01 | gitlab.dream.lab | Incus dnsmasq (static alias) |
+| step-ca-01 | step-ca.dream.lab | Incus dnsmasq (static alias) |
+| openbao-01 | openbao.dream.lab | Incus dnsmasq (static alias) |
+| talos-cp-01 | talos-cp-01.dream.lab | Incus dnsmasq (VM hostname only) |
+
+Kubernetes nodes are addressed by hostname only — they expose no user-facing service DNS name.
 
 ### PKI
 
