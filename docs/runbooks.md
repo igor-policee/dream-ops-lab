@@ -36,9 +36,9 @@ while the host is running. No fixed wall-clock schedule — the host is mostly o
 
 ---
 
-### Initial Setup (one-time, Phase 1.5)
+### Initial Setup (split across phases)
 
-**On the host:**
+**Phase 1.1 — On the host (before first `tofu apply`):**
 
 ```bash
 # Install age
@@ -62,10 +62,16 @@ shred -u /root/.age-backup.key
 The private key must not persist on the host. Only the public key (embedded in the
 backup script) lives on the host — it cannot be used to decrypt.
 
-**On dev-ubuntu-01:**
+**Phase 1.1 — On dev-ubuntu-01:**
 
 ```bash
-mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab,tfstate}
+mkdir -p ~/backups/dream-ops-lab/tfstate
+```
+
+**Phase 1.5 — On dev-ubuntu-01 (after state migrated to GitLab in Phase 1.4):**
+
+```bash
+mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab}
 ```
 
 ---
@@ -125,12 +131,13 @@ if incus exec gitlab-01 -- test -f /etc/gitlab/gitlab.rb 2>/dev/null; then
     GITLAB_BACKUP=$(incus exec gitlab-01 -- \
         ls -t /var/opt/gitlab/backups/*.tar 2>/dev/null | head -1)
     if [ -n "${GITLAB_BACKUP}" ]; then
-        incus file pull "gitlab-01${GITLAB_BACKUP}" "${TMPDIR}/gitlab-backup.tar"
+        GITLAB_BACKUP_FILE=$(basename "${GITLAB_BACKUP}")
+        incus file pull "gitlab-01${GITLAB_BACKUP}" "${TMPDIR}/${GITLAB_BACKUP_FILE}"
         incus file pull gitlab-01/etc/gitlab/gitlab-secrets.json \
             "${TMPDIR}/gitlab-secrets.json"
         incus file pull gitlab-01/etc/gitlab/gitlab.rb "${TMPDIR}/gitlab.rb"
         tar -czf "${TMPDIR}/gitlab-bundle.tar.gz" -C "${TMPDIR}" \
-            gitlab-backup.tar gitlab-secrets.json gitlab.rb
+            "${GITLAB_BACKUP_FILE}" gitlab-secrets.json gitlab.rb
         age -r "${AGE_PUBKEY}" -o "${TMPDIR}/gitlab-${DATE}.tar.gz.age" \
             "${TMPDIR}/gitlab-bundle.tar.gz"
         rsync "${TMPDIR}/gitlab-${DATE}.tar.gz.age" \
@@ -313,10 +320,16 @@ age -d -i /tmp/age-backup.key -o gitlab-bundle.tar.gz gitlab-YYYYMMDD.tar.gz.age
 mkdir -p /tmp/gitlab-restore
 tar -xzf gitlab-bundle.tar.gz -C /tmp/gitlab-restore
 
-# Push data backup into a freshly provisioned gitlab-01 VM
-incus file push /tmp/gitlab-restore/gitlab-backup.tar \
-    gitlab-01/var/opt/gitlab/backups/gitlab-backup.tar
-incus exec gitlab-01 -- chown git:git /var/opt/gitlab/backups/gitlab-backup.tar
+# Derive backup prefix — GitLab restore expects BACKUP=<prefix> where the file
+# on disk is named <prefix>_gitlab_backup.tar
+BACKUP_FILE=$(ls /tmp/gitlab-restore/*_gitlab_backup.tar 2>/dev/null | head -1)
+BACKUP_PREFIX=$(basename "${BACKUP_FILE}" _gitlab_backup.tar)
+
+# Push data backup into a freshly provisioned gitlab-01 VM (keep original filename)
+incus file push "${BACKUP_FILE}" \
+    "gitlab-01/var/opt/gitlab/backups/$(basename "${BACKUP_FILE}")"
+incus exec gitlab-01 -- chown git:git \
+    "/var/opt/gitlab/backups/$(basename "${BACKUP_FILE}")"
 
 # Restore config files (required before running gitlab-restore)
 incus file push /tmp/gitlab-restore/gitlab-secrets.json \
@@ -327,7 +340,7 @@ incus file push /tmp/gitlab-restore/gitlab.rb \
 # Run restore (GitLab service must be stopped first)
 incus exec gitlab-01 -- gitlab-ctl stop puma
 incus exec gitlab-01 -- gitlab-ctl stop sidekiq
-incus exec gitlab-01 -- gitlab-backup restore BACKUP=gitlab-backup
+incus exec gitlab-01 -- gitlab-backup restore "BACKUP=${BACKUP_PREFIX}"
 incus exec gitlab-01 -- gitlab-ctl reconfigure
 incus exec gitlab-01 -- gitlab-ctl start
 incus exec gitlab-01 -- gitlab-rake gitlab:check SANITIZE=true

@@ -51,8 +51,14 @@ the next begins. Order within a phase is sequential where noted.
 **Tooling:** OpenTofu (VM provisioning) + Ansible (configuration)
 
 ### 1.1 OpenTofu base module
+- [ ] Install `age` on host
+- [ ] Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
+- [ ] Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
+- [ ] Shred the private key file: `shred -u /root/.age-backup.key`
+- [ ] Create tfstate backup directory on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/tfstate`
 - [ ] Write reusable OpenTofu module for Incus VM (CPU, RAM, disk, network, cloud-init)
-- [ ] Use local state backend initially — GitLab is not yet available at this stage
+- [ ] Use local state backend — GitLab is not yet available at this stage
+- [ ] Run a manual tfstate backup after each `tofu apply` until Phase 1.4 is complete (see [runbooks.md](runbooks.md))
 
 ### 1.2 Provision and configure step-ca-01
 - [ ] Provision VM via OpenTofu
@@ -85,10 +91,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Remove tfstate backups from dev-ubuntu-01: `ssh dev-ubuntu-01 "rm -rf ~/backups/dream-ops-lab/tfstate"`
 
 ### 1.5 Configure backup automation
-- [ ] Install `age` on host
-- [ ] Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
-- [ ] Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
-- [ ] Create backup directories on dev-ubuntu-01: `~/backups/dream-ops-lab/{step-ca,openbao,gitlab,tfstate}`
+- [ ] Create backup directories on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab}`
 - [ ] Create dedicated OpenBao backup token with `sys/storage/raft/snapshot` policy
 - [ ] Deploy backup script to host at `/usr/local/bin/dream-ops-backup.sh`
 - [ ] Deploy systemd service (`dream-ops-backup.service`) and timer (`dream-ops-backup.timer`)

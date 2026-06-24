@@ -77,7 +77,9 @@ a standalone VM independent of Kubernetes.
 ## 2026-06-24 — Operational secrets in OpenBao
 
 **Decision:** All operational secrets (Talos machine configs, kubeconfig, Ansible
-sensitive vars, API tokens) are stored in OpenBao. Nothing is stored in Git or on disk.
+sensitive vars, API tokens) are stored in OpenBao. Nothing is stored in Git.
+On-disk exceptions: bootstrap tfstate (local state backend, removed after Phase 1.4)
+and the OpenBao backup token (least-privilege, scoped to Raft snapshot only).
 
 **Reason:** Centralises secret management. OpenBao provides audit logs, TTL-based
 leases, AppRole auth, and fine-grained access policies. Consistent with the platform's

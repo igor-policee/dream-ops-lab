@@ -119,7 +119,7 @@ A VPS with a fixed public IP, online 24/7. Serves two roles in the platform:
 | Role | Details |
 |------|---------|
 | Remote access endpoint | Accepts the reverse SSH tunnel from the physical host; provides external SSH entry point |
-| Off-site backup storage | Stores encrypted backups of critical VM data (OpenBao snapshots, step-ca CA material, OpenTofu state during bootstrap) |
+| Off-site backup storage | Stores encrypted backups of critical VM data (OpenBao snapshots, step-ca CA material, GitLab data, OpenTofu state during bootstrap) |
 
 The physical host is turned on and off as needed. dev-ubuntu-01 is always reachable,
 making it a reliable anchor for both access and backup.
