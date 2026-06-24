@@ -12,7 +12,7 @@ the next begins. Order within a phase is sequential where noted.
 ### 0.0 Pre-flight: confirm backup boundary
 > **Must complete before touching any host configuration.**
 
-- [ ] Confirm full-disk backup strategy is planned and in place (see Risks in [handoff-context.md](handoff-context.md))
+- [ ] Confirm backup boundary and risk acceptance: critical secrets and GitLab are backed up; synthetic K8s data is not; risk accepted for lab environment (see Risks in [handoff-context.md](handoff-context.md))
 - [ ] Verify Windows dual-boot (nvme0n1) is not affected by planned changes
 - [ ] Document rollback plan for libvirt removal (snapshot or note current VM state)
 - [ ] Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
@@ -58,7 +58,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Create tfstate backup directory on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/tfstate`
 - [ ] Write reusable OpenTofu module for Incus VM (CPU, RAM, disk, network, cloud-init)
 - [ ] Use local state backend — GitLab is not yet available at this stage
-- [ ] Run a manual tfstate backup after each `tofu apply` until Phase 1.4 is complete (see [runbooks.md](runbooks.md))
+- [ ] Run a manual tfstate backup after each `tofu apply` until Phase 1.4 is complete (see "Manual tfstate Backup" in [runbooks.md](runbooks.md))
 
 ### 1.2 Provision and configure step-ca-01
 - [ ] Provision VM via OpenTofu

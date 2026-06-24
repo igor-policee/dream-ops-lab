@@ -409,7 +409,7 @@ infrastructure pipelines are not routed through GitLab Runner.
 ## 2026-06-24 — Backup strategy: age + dev-ubuntu-01 + Bitwarden
 
 **Decision:** Back up critical VM data (OpenBao snapshots, step-ca CA material,
-OpenTofu state) to dev-ubuntu-01, encrypted with `age` (asymmetric). Store the
+GitLab data, OpenTofu state) to dev-ubuntu-01, encrypted with `age` (asymmetric). Store the
 age private key and OpenBao unseal shards in Bitwarden. Trigger backups via
 systemd (on host startup + hourly timer), not cron.
 

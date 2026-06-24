@@ -76,6 +76,23 @@ mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab}
 
 ---
 
+### Manual tfstate Backup (Phase 1.1–1.4 only)
+
+Before the full backup script is deployed in Phase 1.5, run this after every
+`tofu apply` to protect the local state:
+
+```bash
+AGE_PUBKEY="age1..."   # public key printed during age-keygen in Phase 1.1
+DATE=$(date +%Y%m%d-%H%M%S)
+TFSTATE="/opt/infra/terraform.tfstate"
+TMP="/tmp/terraform-${DATE}.tfstate.age"
+age -r "${AGE_PUBKEY}" -o "${TMP}" "${TFSTATE}"
+rsync "${TMP}" "dev-ubuntu-01:~/backups/dream-ops-lab/tfstate/"
+rm -f "${TMP}"
+```
+
+---
+
 ### Backup Script
 
 Deploy to `/usr/local/bin/dream-ops-backup.sh` (mode 0700, owner root):
@@ -325,23 +342,30 @@ tar -xzf gitlab-bundle.tar.gz -C /tmp/gitlab-restore
 BACKUP_FILE=$(ls /tmp/gitlab-restore/*_gitlab_backup.tar 2>/dev/null | head -1)
 BACKUP_PREFIX=$(basename "${BACKUP_FILE}" _gitlab_backup.tar)
 
+# Verify the GitLab version on the target VM matches the backup version.
+# GitLab does not support cross-version restore.
+# The backup prefix encodes the version: 1234567890_2026_06_24_17.1.0_gitlab_backup.tar
+# → version is 17.1.0. Confirm with:
+incus exec gitlab-01 -- gitlab-rake gitlab:env:info 2>/dev/null | grep "GitLab version"
+
 # Push data backup into a freshly provisioned gitlab-01 VM (keep original filename)
 incus file push "${BACKUP_FILE}" \
     "gitlab-01/var/opt/gitlab/backups/$(basename "${BACKUP_FILE}")"
 incus exec gitlab-01 -- chown git:git \
     "/var/opt/gitlab/backups/$(basename "${BACKUP_FILE}")"
 
-# Restore config files (required before running gitlab-restore)
+# Restore config files and reconfigure before restore — secrets must be in place
+# so GitLab can decrypt the backup data
 incus file push /tmp/gitlab-restore/gitlab-secrets.json \
     gitlab-01/etc/gitlab/gitlab-secrets.json
 incus file push /tmp/gitlab-restore/gitlab.rb \
     gitlab-01/etc/gitlab/gitlab.rb
+incus exec gitlab-01 -- gitlab-ctl reconfigure
 
-# Run restore (GitLab service must be stopped first)
+# Run restore (stop application services first, keep postgres/redis running)
 incus exec gitlab-01 -- gitlab-ctl stop puma
 incus exec gitlab-01 -- gitlab-ctl stop sidekiq
 incus exec gitlab-01 -- gitlab-backup restore "BACKUP=${BACKUP_PREFIX}"
-incus exec gitlab-01 -- gitlab-ctl reconfigure
 incus exec gitlab-01 -- gitlab-ctl start
 incus exec gitlab-01 -- gitlab-rake gitlab:check SANITIZE=true
 ```
