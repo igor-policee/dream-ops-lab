@@ -43,14 +43,23 @@ while the host is running. No fixed wall-clock schedule — the host is mostly o
 # Install age
 apt-get install -y age
 
-# Generate key pair
+# Generate key pair — private key is written to file only temporarily
 age-keygen -o /root/.age-backup.key   # prints the public key to stdout
 chmod 400 /root/.age-backup.key
 ```
 
-Copy the printed public key (starts with `age1...`) — it goes into the backup script.
-Store the private key file content in Bitwarden as secure note
-"dream-ops-lab age backup key".
+Copy the printed public key (starts with `age1...`) — it goes into the backup script
+(public key is not a secret).
+
+**Immediately** copy the private key content to Bitwarden as secure note
+"dream-ops-lab age backup key", then shred the local file:
+
+```bash
+shred -u /root/.age-backup.key
+```
+
+The private key must not persist on the host. Only the public key (embedded in the
+backup script) lives on the host — it cannot be used to decrypt.
 
 **On dev-ubuntu-01:**
 

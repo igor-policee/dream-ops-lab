@@ -240,7 +240,13 @@ terraform {
 
 ### Operational secrets
 
-All operational secrets are stored in OpenBao. No secrets are stored in Git or on disk.
+Durable operational secrets are managed in OpenBao. No secrets are stored in Git.
+On-disk exceptions with a documented lifecycle:
+
+| Item | Location | Lifecycle |
+|------|----------|-----------|
+| OpenTofu state (bootstrap) | host filesystem | Removed after `tofu init -migrate-state` in Phase 1.4 |
+| OpenBao backup token | `/root/.openbao-backup-token` | Least-privilege read-only token; renewed periodically |
 
 | Data | Storage |
 |------|---------|

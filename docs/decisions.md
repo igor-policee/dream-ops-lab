@@ -201,13 +201,13 @@ is smaller than libvirt but sufficient for this use case.
 ## 2026-06-23 — NAT bridge (incusbr0) for VM networking
 
 **Decision:** Use an Incus internal bridge (incusbr0, 10.10.0.0/24) with NAT to the
-WiFi uplink (wlan0).
+WiFi uplink (wlp5s0).
 
 **Reason:** WiFi (802.11) does not support L2 bridging due to the three-address frame
 limitation. NAT bridge is the only viable option without additional hardware.
 
 **Alternatives considered:**
-- Direct L2 bridge to wlan0 — not possible on WiFi
+- Direct L2 bridge to wlp5s0 — not possible on WiFi
 - Incus OVN — adds complexity with no benefit given single-host setup
 
 **Trade-offs:** VMs are behind NAT. External access to services requires explicit
@@ -256,7 +256,9 @@ browsers and tools once. No public CA trust.
 - CoreDNS + k8s_gateway plugin: authoritative for platform service names in K8s
 
 CoreDNS is exposed via Cilium LoadBalancer at a stable IP on incusbr0.
-Each server forwards queries it cannot answer to the other.
+Each server forwards to the other only for names it knows the other can answer.
+Both servers are terminal for unknown `dream.lab` names — they return NXDOMAIN
+rather than forwarding back. This prevents infinite forwarding loops.
 
 **Reason:** Incus dnsmasq handles VM lifecycle automatically. k8s_gateway
 auto-registers DNS records when Gateway API resources are created — no manual

@@ -80,10 +80,10 @@ Pod
 
 ## DNS server responsibilities
 
-| Server | Address | Authoritative for | Forwards to |
-|--------|---------|-------------------|-------------|
-| Incus dnsmasq | 10.10.0.1 | VM hostnames in `dream.lab` | CoreDNS (dream.lab platform names), router (internet) |
-| CoreDNS + k8s_gateway | 10.10.0.53 | Platform service names in `dream.lab` | Incus dnsmasq (VM names), upstream (internet) |
+| Server | Address | Authoritative for | Forwards to | On unknown dream.lab |
+|--------|---------|-------------------|-------------|----------------------|
+| Incus dnsmasq | 10.10.0.1 | VM hostnames in `dream.lab` | CoreDNS (platform names), router (internet) | NXDOMAIN — does not forward back |
+| CoreDNS + k8s_gateway | 10.10.0.53 | Platform service names in `dream.lab` | Incus dnsmasq (VM names), upstream (internet) | NXDOMAIN — does not forward back |
 
 ---
 

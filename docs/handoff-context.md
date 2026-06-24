@@ -17,7 +17,7 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 **Networking layer (2026-06-23):**
 1. **Host OS** — Ubuntu 24.04 LTS retained, no reinstall
 2. **Hypervisor** — Incus replaces libvirt stack
-3. **VM networking** — incusbr0 bridge, 10.10.0.0/24, NAT to wlan0
+3. **VM networking** — incusbr0 bridge, 10.10.0.0/24, NAT to wlp5s0
 4. **Remote access** — reverse SSH tunnel to dev-ubuntu-01 via autossh + systemd
 
 **Incus layer (2026-06-24):**

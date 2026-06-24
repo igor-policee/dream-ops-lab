@@ -9,6 +9,14 @@ the next begins. Order within a phase is sequential where noted.
 
 **Tooling:** Ansible
 
+### 0.0 Pre-flight: confirm backup boundary
+> **Must complete before touching any host configuration.**
+
+- Confirm full-disk backup strategy is planned and in place (see Risks in [handoff-context.md](handoff-context.md))
+- Verify Windows dual-boot (nvme0n1) is not affected by planned changes
+- Document rollback plan for libvirt removal (snapshot or note current VM state)
+- Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
+
 ### 0.1 Remove libvirt stack
 - Stop and destroy all 4 running libvirt VMs
 - Purge libvirt, libvirtd, virt-manager, virtinst packages
