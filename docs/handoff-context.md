@@ -12,7 +12,7 @@ storage pool. Windows dual-boot on nvme0n1 — do not touch.
 
 ## What Was Decided
 
-Bottom-up architecture discussion completed through the Incus layer.
+Bottom-up architecture discussion completed. See [decisions.md](decisions.md) for full rationale.
 
 **Networking layer (2026-06-23):**
 1. **Host OS** — Ubuntu 24.04 LTS retained, no reinstall
@@ -30,35 +30,33 @@ Bottom-up architecture discussion completed through the Incus layer.
 
 **DNS and PKI layer (2026-06-24):**
 11. **Domain** — `dream.lab` (internal only)
-12. **DNS** — Incus dnsmasq (VM names) + CoreDNS + k8s_gateway (platform services)
-13. **PKI** — step-ca as dedicated Incus VM (`step-ca-01`), ACME issuer for cert-manager
-14. **Certificates** — wildcard `*.dream.lab` from step-ca
-15. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
+12. **DNS** — Incus dnsmasq (VM names + aliases) + CoreDNS + k8s_gateway (platform services)
+13. **DNS naming** — service DNS names carry no numeric suffix (gitlab.dream.lab, not gitlab-01.dream.lab)
+14. **PKI** — step-ca as dedicated Incus VM (`step-ca-01`), ACME issuer for cert-manager
+15. **Certificates** — wildcard `*.dream.lab` from step-ca
+16. **VM naming** — all hostnames numbered (step-ca-01, gitlab-01, talos-cp-01, etc.)
 
-**Talos layer (2026-06-24):**
-16. **K8s topology** — single control plane (talos-cp-01), 1 general worker + 1 GPU worker
-17. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01 (6/20GB/200GB), talos-worker-gpu-01 (6/20GB/200GB). Total: 53 GB RAM, 11 GB reserve.
+**Talos and K8s layer (2026-06-24):**
+17. **K8s topology** — single control plane (talos-cp-01), 1 general worker + 1 GPU worker
+18. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01 (6/20GB/200GB), talos-worker-gpu-01 (6/20GB/200GB). Total: 53 GB RAM, 11 GB reserve.
 
 **Supporting infrastructure (2026-06-24):**
-16. **dev-ubuntu-01** — VPS with fixed public IP, online 24/7; dual role: reverse SSH tunnel endpoint + encrypted off-site backup storage
+19. **dev-ubuntu-01** — VPS with fixed public IP, online 24/7; reverse SSH tunnel endpoint + encrypted off-site backup storage (age + Bitwarden)
+20. **Backup strategy** — age asymmetric encryption, systemd event triggers, dev-ubuntu-01 as destination, Bitwarden for keys and unseal shards
 
 **Platform services layer (2026-06-24):**
-18. **OpenBao** — standalone Incus VM (openbao-01), outside K8s, pre-K8s infrastructure
-19. **Container registry** — GitLab Container Registry (built into gitlab-01)
-20. **OpenTofu state** — GitLab HTTP backend (built-in, locking + versioning)
-21. **Operational secrets** — OpenBao (Talos configs, kubeconfig, tokens)
-21. **GPU** — NVIDIA RTX 3070 Ti, NVIDIA GPU Operator in K8s
-19. **Secrets** — OpenBao
-20. **Policy** — Kyverno
-21. **Runtime security** — Tetragon
-22. **Image scanning** — Trivy
-23. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
-24. **Object storage** — MinIO
-25. **Streaming** — Strimzi (Kafka)
-26. **Batch processing** — Spark Operator
-27. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
-
-See [decisions.md](decisions.md) for full rationale on each choice.
+21. **OpenBao** — standalone Incus VM (openbao-01), outside K8s, stores all operational secrets
+22. **Container registry** — GitLab Container Registry (built into gitlab-01)
+23. **OpenTofu state** — local backend during bootstrap → migrate to GitLab HTTP backend after Phase 1.4
+24. **GPU** — NVIDIA RTX 3070 Ti, PCI passthrough to talos-worker-gpu-01, NVIDIA GPU Operator in K8s
+25. **Policy** — Kyverno
+26. **Runtime security** — Tetragon
+27. **Image scanning** — Trivy
+28. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
+29. **Object storage** — MinIO (deployed in Phase 5, before Loki/Tempo)
+30. **Streaming** — Strimzi (Kafka, KRaft mode)
+31. **Batch processing** — Spark Operator
+32. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
 
 ## Next Steps
 

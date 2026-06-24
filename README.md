@@ -23,7 +23,7 @@ machine using an immutable, API-driven infrastructure philosophy.
 | Host OS | Ubuntu 24.04 LTS |
 | Hypervisor | Incus (ZFS storage, NAT bridge) |
 | VM OS | Talos Linux |
-| Kubernetes | v1.35.x |
+| Kubernetes | latest stable (bundled with selected Talos release) |
 | CNI | Cilium (eBPF, kube-proxy replacement) |
 | Provisioning | OpenTofu + Ansible |
 | Source control / CI | GitLab CE |

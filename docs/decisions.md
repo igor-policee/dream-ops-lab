@@ -222,7 +222,7 @@ to dev-ubuntu-01 (autossh + systemd). Remote access is via SSH into the host thr
 All platform interaction (kubectl, talosctl, incus) happens directly on the host.
 
 **Reason:** The host is behind WiFi NAT with no public IP. Reverse SSH is the
-simplest reliable solution. Works on standard SSH port, avoids DPI/ТСПУ filtering
+simplest reliable solution. Works on standard SSH port, avoids DPI/TSPU filtering
 issues relevant to the operating region (Russia).
 
 **Alternatives considered:**
