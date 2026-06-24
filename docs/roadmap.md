@@ -88,7 +88,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Run `tofu init -migrate-state` to migrate local state to the GitLab HTTP backend
 - [ ] Verify state appears in GitLab: project → Operate → Terraform states
 - [ ] Remove local state files from host: `rm -f terraform.tfstate terraform.tfstate.backup`
-- [ ] Remove tfstate backups from dev-ubuntu-01: `ssh dev-ubuntu-01 "rm -rf ~/backups/dream-ops-lab/tfstate"`
+- [ ] Archive or remove tfstate backups from dev-ubuntu-01 after confirming GitLab state is correct: `ssh dev-ubuntu-01 "rm -rf ~/backups/dream-ops-lab/tfstate"`
 
 ### 1.5 Configure backup automation
 - [ ] Create backup directories on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab}`

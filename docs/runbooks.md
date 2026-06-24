@@ -17,6 +17,7 @@ by a fixed schedule.
 Physical Host (when running)
   ├── step-ca-01 VM  → /etc/step-ca tarball
   ├── openbao-01 VM  → Raft snapshot (only when unsealed)
+  ├── gitlab-01 VM   → GitLab backup + config bundle (gitlab.rb + gitlab-secrets.json)
   └── OpenTofu state → terraform.tfstate (bootstrap phase only)
         ↓ encrypted with age (asymmetric, public key on host)
 dev-ubuntu-01 ~/backups/dream-ops-lab/
