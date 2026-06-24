@@ -18,7 +18,7 @@ Bottom-up architecture discussion completed through the Incus layer.
 1. **Host OS** — Ubuntu 24.04 LTS retained, no reinstall
 2. **Hypervisor** — Incus replaces libvirt stack
 3. **VM networking** — incusbr0 bridge, 10.10.0.0/24, NAT to wlan0
-4. **Remote access** — reverse SSH tunnel to VPS via autossh + systemd
+4. **Remote access** — reverse SSH tunnel to dev-ubuntu-01 via autossh + systemd
 
 **Incus layer (2026-06-24):**
 5. **Incus install** — Zabbly repository
@@ -38,6 +38,9 @@ Bottom-up architecture discussion completed through the Incus layer.
 **Talos layer (2026-06-24):**
 16. **K8s topology** — single control plane (talos-cp-01), 1 general worker + 1 GPU worker
 17. **VM resources** — step-ca-01 (1/1GB/10GB), openbao-01 (1/2GB/20GB), gitlab-01 (4/6GB/200GB), talos-cp-01 (2/4GB/100GB), talos-worker-01 (6/20GB/200GB), talos-worker-gpu-01 (6/20GB/200GB). Total: 53 GB RAM, 11 GB reserve.
+
+**Supporting infrastructure (2026-06-24):**
+16. **dev-ubuntu-01** — VPS with fixed public IP, online 24/7; dual role: reverse SSH tunnel endpoint + encrypted off-site backup storage
 
 **Platform services layer (2026-06-24):**
 18. **OpenBao** — standalone Incus VM (openbao-01), outside K8s, pre-K8s infrastructure
@@ -72,6 +75,18 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 - [ ] Phase 7 — GPU workloads
 - [ ] Phase 8 — Optional (AmneziaWG, image signing, hardening)
 
+## Documentation Status
+
+| Document | Status |
+|----------|--------|
+| README.md | Current |
+| architecture.md | Current — dev-ubuntu-01 added as named system element |
+| network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
+| roadmap.md | Current — Phase 1.5 backup setup added, local→GitLab state path documented |
+| decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
+| runbooks.md | Current — full backup/recovery with age + dev-ubuntu-01 + Bitwarden |
+| handoff-context.md | Current |
+
 ## Risks and Constraints
 
 | Risk | Notes |
@@ -80,6 +95,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | Single physical host | No hardware redundancy; acceptable for training environment |
 | DPI filtering (RU) | WireGuard may be blocked; reverse SSH used instead; AmneziaWG deferred |
 | KVM stack migration | libvirt removal must not break existing qemu-kvm before Incus is ready |
+| SSD failure — no full backup strategy | **Not yet planned.** Current backup covers only critical secrets and VM config snapshots. Full data loss (host SSD or VM disk failure) is unmitigated. Must be planned before Phase 0 starts. |
 
 ## Validation Status
 

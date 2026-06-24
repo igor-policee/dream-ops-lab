@@ -12,7 +12,7 @@ Kubernetes cluster on top. All layers follow an immutable, API-driven approach.
 | Hostname | homelab-ubuntu |
 | Hardware | MSI MAG Z590 Codex X5 |
 | CPU | Intel Core i7-11700KF @ 3.60 GHz (8 cores / 16 threads) |
-| RAM | 32 GB installed / 64 GB planned (additional DIMMs purchased, not yet installed) |
+| RAM | 64 GB |
 | OS | Ubuntu 24.04.4 LTS |
 | Kernel | 6.8.0-110-generic |
 
@@ -98,17 +98,35 @@ remote access layer.
 
 ```
 Internet
-  └── VPS (public IP)
+  └── dev-ubuntu-01 (fixed public IP)
         ← reverse SSH tunnel (outbound from host, persistent via autossh + systemd)
               └── Physical Host (:22)
                     └── incusbr0 (10.10.0.0/24)
                           └── Incus VMs
 ```
 
-Access pattern: SSH into the host via VPS reverse tunnel, then interact with all
+Access pattern: SSH into the host via dev-ubuntu-01 reverse tunnel, then interact with all
 components (kubectl, talosctl, incus CLI) directly from the host.
 
 Ad-hoc local port forwarding is used when browser access to internal UIs is needed.
+
+## Supporting Infrastructure
+
+### dev-ubuntu-01
+
+A VPS with a fixed public IP, online 24/7. Serves two roles in the platform:
+
+| Role | Details |
+|------|---------|
+| Remote access endpoint | Accepts the reverse SSH tunnel from the physical host; provides external SSH entry point |
+| Off-site backup storage | Stores encrypted backups of critical VM data (OpenBao snapshots, step-ca CA material, OpenTofu state during bootstrap) |
+
+The physical host is turned on and off as needed. dev-ubuntu-01 is always reachable,
+making it a reliable anchor for both access and backup.
+
+Backup files on dev-ubuntu-01 are encrypted with `age` (asymmetric). The private
+decryption key is stored in Bitwarden, not on the host or on dev-ubuntu-01 itself.
+See [runbooks.md](runbooks.md) for backup procedures.
 
 ## DNS and PKI
 
@@ -181,8 +199,13 @@ exists and during cluster rebuilds.
 
 ### OpenTofu state
 
-Stored in GitLab's built-in HTTP backend. Supports locking and versioning.
-State lives alongside the code in GitLab, access controlled via GitLab tokens.
+During bootstrap (Phase 1, before GitLab is available), state is stored locally on the
+host using the `local` backend. The state file is included in the automated off-site
+backup rotation to dev-ubuntu-01.
+
+After gitlab-01 is operational (end of Phase 1.4), state is migrated to GitLab's
+built-in HTTP backend via `tofu init -migrate-state`. This backend supports locking
+and versioning; state lives alongside the code in GitLab under the same access control.
 
 ```hcl
 terraform {

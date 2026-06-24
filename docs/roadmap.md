@@ -32,9 +32,9 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 0.5 Configure remote access
 - Install autossh
-- Create systemd service for reverse SSH tunnel to VPS
+- Create systemd service for reverse SSH tunnel to dev-ubuntu-01
 - Enable and start service
-- Verify SSH access through VPS → host
+- Verify SSH access through dev-ubuntu-01 → host
 
 ---
 
@@ -44,7 +44,7 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 1.1 OpenTofu base module
 - Write reusable OpenTofu module for Incus VM (CPU, RAM, disk, network, cloud-init)
-- Configure GitLab as OpenTofu HTTP state backend
+- Use local state backend initially — GitLab is not yet available at this stage
 
 ### 1.2 Provision and configure step-ca-01
 - Provision VM via OpenTofu
@@ -58,8 +58,9 @@ the next begins. Order within a phase is sequential where noted.
 - Install OpenBao (Ansible)
 - Initialize and unseal OpenBao
 - Configure AppRole auth method
-- Create initial policies (admin, infra-read, k8s-app)
+- Create initial policies (admin, infra-read, k8s-app, backup)
 - Store step-ca root certificate in OpenBao
+- Store unseal key shards and CA password in Bitwarden (see [runbooks.md](runbooks.md))
 
 ### 1.4 Provision and configure gitlab-01
 - Provision VM via OpenTofu
@@ -67,10 +68,26 @@ the next begins. Order within a phase is sequential where noted.
 - Obtain TLS certificate from step-ca via ACME
 - Configure GitLab: domain (`gitlab.dream.lab`), registry, SSH
 - Create GitLab groups and infrastructure repositories
-- Configure OpenTofu HTTP state backend project in GitLab
 - Enable GitLab Container Registry
+- Create infrastructure project in GitLab and enable the Terraform/OpenTofu state backend
+- Add `backend "http"` block to OpenTofu configuration pointing to GitLab
+- Run `tofu init -migrate-state` to migrate local state to the GitLab HTTP backend
+- Verify state appears in GitLab: project → Operate → Terraform states
+- Remove local state files from host: `rm -f terraform.tfstate terraform.tfstate.backup`
+- Remove tfstate backups from dev-ubuntu-01: `ssh dev-ubuntu-01 "rm -rf ~/backups/dream-ops-lab/tfstate"`
 
-### 1.5 Configure DNS
+### 1.5 Configure backup automation
+- Install `age` on host
+- Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
+- Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
+- Create backup directories on dev-ubuntu-01: `~/backups/dream-ops-lab/{step-ca,openbao,tfstate}`
+- Create dedicated OpenBao backup token with `sys/storage/raft/snapshot` policy
+- Deploy backup script to host at `/usr/local/bin/dream-ops-backup.sh`
+- Deploy systemd service (`dream-ops-backup.service`) and timer (`dream-ops-backup.timer`)
+- Enable timer: `systemctl enable --now dream-ops-backup.timer`
+- Trigger manual run and verify encrypted files appear on dev-ubuntu-01
+
+### 1.6 Configure DNS
 - Configure Incus dnsmasq to serve `dream.lab` for VM hostnames
 - Verify host resolves `step-ca-01.dream.lab`, `gitlab-01.dream.lab`, etc.
 
@@ -255,7 +272,7 @@ Order is strict within this phase.
 > adopted, dropped, or reprioritized as the platform evolves.
 
 ### 8.1 AmneziaWG (alternative remote access)
-- Install AmneziaWG on host and VPS
+- Install AmneziaWG on host and dev-ubuntu-01
 - Configure obfuscated WireGuard tunnel
 - Test connectivity through RU ISP DPI
 

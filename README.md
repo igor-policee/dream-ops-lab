@@ -49,6 +49,7 @@ machine using an immutable, API-driven infrastructure philosophy.
 - [Network Diagram](docs/network-diagram.md) — DNS resolution flow, PKI, topology
 - [Roadmap](docs/roadmap.md) — implementation phases and sequencing
 - [Decisions](docs/decisions.md) — design decisions and trade-offs
+- [Runbooks](docs/runbooks.md) — operational procedures, backup and recovery
 - [Handoff Context](docs/handoff-context.md) — current state and next steps
 
 ## Status

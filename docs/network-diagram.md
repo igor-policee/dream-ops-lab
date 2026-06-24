@@ -29,13 +29,13 @@ Physical Host (homelab-ubuntu)
 
 ```
 Internet
-  └── VPS (public IP)
+  └── dev-ubuntu-01 (fixed public IP)
         ← autossh reverse tunnel (from host, persistent via systemd)
               └── Physical Host :22
                     └── incusbr0 (all VMs reachable from host)
 ```
 
-Access pattern: SSH to host via VPS, then use kubectl / talosctl / incus / curl
+Access pattern: SSH to host via dev-ubuntu-01, then use kubectl / talosctl / incus / curl
 directly from the host. Ad-hoc port forwarding for browser access to platform UIs.
 
 ---

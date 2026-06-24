@@ -215,10 +215,10 @@ port forwarding or routing through the reverse tunnel.
 
 ---
 
-## 2026-06-23 — Reverse SSH tunnel via VPS for remote access
+## 2026-06-23 — Reverse SSH tunnel via dev-ubuntu-01 for remote access
 
 **Decision:** The physical host maintains a persistent outbound reverse SSH tunnel
-to a VPS (autossh + systemd). Remote access is via SSH into the host through the VPS.
+to dev-ubuntu-01 (autossh + systemd). Remote access is via SSH into the host through dev-ubuntu-01.
 All platform interaction (kubectl, talosctl, incus) happens directly on the host.
 
 **Reason:** The host is behind WiFi NAT with no public IP. Reverse SSH is the
@@ -373,6 +373,63 @@ the host, not through GitLab pipelines.
 
 **Trade-offs:** Runner is unavailable if the cluster is down. Acceptable because
 infrastructure pipelines are not routed through GitLab Runner.
+
+---
+
+## 2026-06-24 — Backup strategy: age + dev-ubuntu-01 + Bitwarden
+
+**Decision:** Back up critical VM data (OpenBao snapshots, step-ca CA material,
+OpenTofu state) to dev-ubuntu-01, encrypted with `age` (asymmetric). Store the
+age private key and OpenBao unseal shards in Bitwarden. Trigger backups via
+systemd (on host startup + hourly timer), not cron.
+
+**Reason:** The physical host is frequently off — a cron schedule is unreliable.
+Systemd event-based triggers (OnBootSec + OnUnitActiveSec) fire correctly regardless
+of how long the host has been off. dev-ubuntu-01 is online 24/7 and already present
+in the architecture as the reverse SSH tunnel endpoint — adding a backup role reuses
+existing infrastructure without new components. Bitwarden Premium is available and
+provides secure, accessible off-site storage for small secrets that do not change.
+
+Asymmetric `age` encryption allows the backup script to encrypt without any secret
+on the host — only the public key is embedded in the script. The private key lives
+in Bitwarden and is only needed for recovery.
+
+**Alternatives considered:**
+- Symmetric encryption (GPG/age -p): requires the passphrase on the host for
+  automation, creating a secret that must be protected there.
+- Bitwarden file attachments for backups: Premium supports it, but Bitwarden is
+  not designed as a file backup store; automated uploads via `bw` CLI are cumbersome.
+- Separate cloud storage (S3/B2): viable but adds an external dependency and cost;
+  dev-ubuntu-01 already exists and is sufficient.
+
+**Trade-offs:** If dev-ubuntu-01 is lost, backups are lost. Acceptable because
+dev-ubuntu-01 is a managed VPS — more durable than the homelab host itself.
+OpenBao snapshot is skipped if OpenBao is sealed (requires manual unseal after
+host boot); at worst, the previous backup is used for recovery.
+
+---
+
+## 2026-06-24 — OpenTofu state: local backend during bootstrap, then GitLab HTTP
+
+**Decision:** Use the `local` backend for OpenTofu state during Phase 1 (while
+gitlab-01 does not yet exist). Include the state file in the automated backup
+rotation to dev-ubuntu-01. After gitlab-01 is operational, migrate state to the
+GitLab HTTP backend via `tofu init -migrate-state`.
+
+**Reason:** The GitLab HTTP backend is not available until gitlab-01 is provisioned
+(Phase 1.4). Using gitlab.com as a temporary backend introduces an external SaaS
+dependency and an extra migration step. Local state with automated encrypted backup
+to dev-ubuntu-01 is simpler: no external accounts, no temporary service to set up,
+and the same backup infrastructure already covers OpenBao and step-ca.
+
+**Alternatives considered:**
+- gitlab.com as temporary backend: zero setup, but introduces external SaaS dependency.
+- Lightweight HTTP state server on dev-ubuntu-01 (e.g., terrastate): avoids local
+  state but adds a new service to operate on dev-ubuntu-01.
+
+**Trade-offs:** State file on local disk; if host fails between backups, up to one
+hour of state changes may be lost. Recoverable via `tofu import` for the small number
+of VMs involved. Risk is acceptable for the bootstrap phase.
 
 ---
 
