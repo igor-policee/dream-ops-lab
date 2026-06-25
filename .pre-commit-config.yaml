@@ -1,0 +1,83 @@
+repos:
+  # ── Basic hooks (auto-fix common issues) ──────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Remove trailing whitespace to keep git diff clean
+      - id: trailing-whitespace
+
+      # Ensure every file ends with a newline (POSIX requirement)
+      - id: end-of-file-fixer
+
+      # Validate YAML syntax — critical for k8s, Helm, CI configs
+      # Use --unsafe if your YAML contains custom !-tags
+      - id: check-yaml
+        args: [--unsafe]
+
+      # Validate JSON syntax (package.json, schema files, etc.)
+      - id: check-json
+
+      # Block commits that contain merge conflict markers (<<<<<<< HEAD)
+      - id: check-merge-conflict
+
+      # Detect accidentally committed private SSH/TLS keys
+      - id: detect-private-key
+
+  # ── Security scanning ─────────────────────────────────────────────────────
+  # Detect secrets: API tokens, passwords, cloud credentials, etc.
+  # Covers 100+ service signatures (AWS, GCP, GitHub, Slack, Vault...)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # SAST for IaC: Terraform, Kubernetes manifests, Dockerfile, CloudFormation
+  # Checks against CIS benchmarks and security best practices
+  # --soft-fail recommended at first — shows violations without blocking commits
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.3.1
+    hooks:
+      - id: checkov
+        args: [--soft-fail]
+
+  # ── IaC: Terraform / Helm / Kubernetes ───────────────────────────────────
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.105.0
+    hooks:
+      # Format .tf files according to Terraform style conventions
+      - id: terraform_fmt
+
+      # Run `terraform validate` in each module directory
+      # Requires initialized Terraform (run `terraform init` first)
+      - id: terraform_validate
+
+      # Auto-generate README docs for modules using terraform-docs
+      # Keeps documentation up-to-date without manual effort
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-apache-license-2.0=false
+
+  # ── Formatting ────────────────────────────────────────────────────────────
+  # Unified code style for YAML, JSON, and Markdown
+  # Note: pre-commit/mirrors-prettier is archived; rbubley/mirrors-prettier
+  # is the actively maintained community fork with stable releases only
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.8.0
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, markdown]
+
+  # ── Linting ───────────────────────────────────────────────────────────────
+  # Lint bash/sh scripts: catches unsafe quoting, bad patterns, portability issues
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+
+  # Lint Dockerfile against best practices and security rules:
+  # no `latest` tags, missing HEALTHCHECK, running as root, etc.
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker

@@ -1,0 +1,18 @@
+title = "dream-ops-lab Gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Known safe placeholders and public keys"
+regexTarget = "match"
+regexes = [
+  '''age1[a-z0-9]{58}''',
+  '''<VAULT_TOKEN>''',
+  '''<TOKEN>''',
+  '''<SECRET>''',
+  '''"dream-ops-lab age backup key"''',
+]
+paths = [
+  '''^\.gitleaks\.toml$''',
+]
