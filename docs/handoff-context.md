@@ -49,14 +49,22 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 22. **Container registry** — GitLab Container Registry (built into gitlab-01)
 23. **OpenTofu state** — local backend during bootstrap → migrate to GitLab HTTP backend after Phase 1.4
 24. **GPU** — NVIDIA RTX 3070 Ti, PCI passthrough to talos-worker-gpu-01, NVIDIA GPU Operator in K8s
-25. **Policy** — Kyverno
-26. **Runtime security** — Tetragon
-27. **Image scanning** — Trivy
+25. **Policy** — Kyverno (extended: CIS benchmark policies, image signing enforcement)
+26. **Runtime security** — Tetragon (custom TracingPolicies, Loki integration)
+27. **Image scanning** — Trivy (CI + IaC + secret scan, SARIF output)
 28. **Observability** — kube-prometheus-stack + Loki + Tempo + OpenTelemetry Collector + Hubble
 29. **Object storage** — MinIO (deployed in Phase 5, before Loki/Tempo)
 30. **Streaming** — Strimzi (Kafka, KRaft mode)
 31. **Batch processing** — Spark Operator
 32. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
+
+**Security and supply chain layer (2026-06-25):**
+33. **Secret scanning** — Gitleaks (pre-commit + CI), Checkov (IaC), baseline in Phase 0.6
+34. **Posture management** — Kubescape (Phase 4.1, NSA/CISA + CIS, continuous + Grafana dashboard)
+35. **Image signing** — Cosign (Phase 4.5), key in OpenBao, enforced via Kyverno verifyImages
+36. **SBOM + SCA** — Syft (CycloneDX) + Dependency-Track (Phase 4.7, NVD/OSV feeds, CI gate)
+37. **Threat model** — living document updated at each phase security checkpoint
+38. **Supply chain** — documented in supply-chain-security.md (SLSA Level 2 target)
 
 ## Next Steps
 
@@ -71,7 +79,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 - [ ] Phase 5 — Observability
 - [ ] Phase 6 — Data platform
 - [ ] Phase 7 — GPU workloads
-- [ ] Phase 8 — Optional (AmneziaWG, image signing, hardening)
+- [ ] Phase 8 — Optional (AmneziaWG, Go secret rotator, SonarQube, Keycloak, Velero, Chaos Mesh, Backstage)
 
 ## Documentation Status
 
@@ -80,9 +88,11 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | README.md | Current |
 | architecture.md | Current — dev-ubuntu-01 added as named system element |
 | network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
-| roadmap.md | Current — Phase 1.5 backup setup added, local→GitLab state path documented |
+| roadmap.md | Current — Phase 4 expanded, security checkpoints added (1.7, 2.4, 3.6, 4.8), Phase 0.6 added |
 | decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
 | runbooks.md | Current — GitLab backup added, retention 3 days everywhere, full recovery procedures |
+| threat-model.md | Current — skeleton with assets, trust boundaries, 4 threat scenarios; updated per phase |
+| supply-chain-security.md | Current — SLSA L2 target, Gitleaks/Checkov/Trivy/Syft/Cosign/Dependency-Track pipeline |
 | handoff-context.md | Current |
 
 ## Risks and Constraints

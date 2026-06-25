@@ -17,6 +17,17 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Document rollback plan for libvirt removal (snapshot or note current VM state)
 - [ ] Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
 
+### 0.6 Security baseline
+> **Must complete before any host configuration changes.**
+
+- [ ] Install pre-commit framework on host: `pip install pre-commit`
+- [ ] Create `.pre-commit-config.yaml` in infra repo with Gitleaks hook
+- [ ] Run `pre-commit install` — all future commits checked for secrets automatically
+- [ ] Install Checkov: `pip install checkov`
+- [ ] Run initial Checkov scan on existing IaC files (if any): `checkov -d .`
+- [ ] Document findings in `docs/security-baseline.md` (even if zero findings — establishes a baseline)
+- [ ] Add `.gitleaks.toml` allowlist for known false positives (age key references, example tokens)
+
 ### 0.1 Remove libvirt stack
 - [ ] Stop and destroy all 4 running libvirt VMs
 - [ ] Purge libvirt, libvirtd, virt-manager, virtinst packages
@@ -106,6 +117,18 @@ the next begins. Order within a phase is sequential where noted.
   - [ ] `openbao.dream.lab` → `openbao-01`
 - [ ] Verify both resolve: `gitlab-01.dream.lab` (VM hostname) and `gitlab.dream.lab` (service name)
 
+### 1.7 Phase 1 security checkpoint
+
+- [ ] Run Checkov against all OpenTofu modules written in Phase 1: `checkov -d infra/`
+- [ ] Verify no secrets committed to Git: `gitleaks detect --source=. --verbose`
+- [ ] Verify OpenBao audit logging is enabled: `bao audit list`
+- [ ] Document threat model entry for Phase 1 components in [docs/threat-model.md](threat-model.md):
+  - step-ca-01: attack surface, blast radius if compromised
+  - openbao-01: attack surface, blast radius if compromised
+  - gitlab-01: attack surface, blast radius if compromised
+- [ ] Verify TLS on all inter-VM communication (step-ca certificates in use)
+- [ ] Verify OpenBao AppRole credentials are least-privilege (review policy scope)
+
 ---
 
 ## Phase 2 — Kubernetes cluster
@@ -127,6 +150,17 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Wait for control plane to be ready
 - [ ] Generate kubeconfig → store in OpenBao
 - [ ] Verify cluster: `kubectl get nodes`
+
+### 2.4 Phase 2 security checkpoint
+
+- [ ] Run kube-bench on talos-cp-01 immediately after bootstrap: `kubectl apply -f https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml`
+- [ ] Save kube-bench output as baseline: `kubectl logs job/kube-bench > docs/kube-bench-baseline.txt`
+- [ ] Document cluster threat model entry in [docs/threat-model.md](threat-model.md):
+  - K8s API server: who has access, from where
+  - etcd: encryption at rest status
+  - Node-to-node traffic: encrypted via Cilium WireGuard or not
+- [ ] Verify Talos machine configs have no hardcoded secrets
+- [ ] Verify kubeconfig stored in OpenBao, not on host filesystem
 
 ---
 
@@ -167,37 +201,108 @@ Order is strict within this phase.
 - [ ] Create GatewayClass and default Gateway
 - [ ] Verify platform service routing (test with a sample HTTPRoute)
 
+### 3.6 Phase 3 security checkpoint
+
+- [ ] Verify all platform services have TLS (cert-manager issued certificates from step-ca)
+- [ ] Verify ArgoCD uses OIDC or SSO — no local admin password in use
+- [ ] Verify Cilium NetworkPolicy denies all pod-to-pod traffic by default (default-deny baseline)
+- [ ] Run Kubescape scan against NSA/CISA framework: `kubescape scan framework nsa`
+- [ ] Save Kubescape output as baseline: `kubescape scan framework nsa --format json > docs/kubescape-baseline.json`
+- [ ] Document network security model in [docs/threat-model.md](threat-model.md):
+  - Which namespaces can talk to which
+  - External ingress points
+  - Egress policy
+
 ---
 
 ## Phase 4 — Security and policy
 
 **Tooling:** ArgoCD
 
-### 4.1 External Secrets Operator
+Order is strict within this phase.
+
+### 4.1 Kubescape (posture baseline)
+
+- [ ] Deploy Kubescape operator via ArgoCD
+- [ ] Run NSA/CISA and CIS benchmark scans
+- [ ] Configure continuous scanning with results stored in Prometheus metrics
+- [ ] Expose Kubescape dashboard in Grafana (after Phase 5)
+- [ ] Fix all CRITICAL findings before proceeding to 4.2
+
+### 4.2 External Secrets Operator
+
 - [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
 - [ ] Create bootstrap K8s secret with AppRole credentials:
   `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
 - [ ] Deploy External Secrets Operator
 - [ ] Create ClusterSecretStore pointing to openbao-01 using the bootstrap secret
 - [ ] Verify secret sync with a test ExternalSecret
+- [ ] Delete bootstrap secret after ESO is operational (ESO manages its own auth from this point)
 
-### 4.2 Kyverno
-- [ ] Deploy Kyverno
+### 4.3 Trivy in CI pipeline
+
+- [ ] Add Trivy scanning stage to GitLab CI pipeline template (`.gitlab-ci.yml` shared template)
+- [ ] Configure to fail on CRITICAL and HIGH CVEs
+- [ ] Configure SARIF output: `trivy image --format sarif --output trivy-results.sarif`
+- [ ] Integrate scan results with GitLab Security Dashboard
+- [ ] Add Trivy IaC scan for Kubernetes manifests: `trivy config k8s/`
+- [ ] Add Trivy secret scan: `trivy fs --scanners secret .`
+
+### 4.4 Kyverno
+
+- [ ] Deploy Kyverno via ArgoCD
 - [ ] Apply baseline policies:
   - [ ] Require resource limits on all pods
   - [ ] Disallow privileged containers
-  - [ ] Require labels (app, environment)
-  - [ ] Disallow latest image tag
+  - [ ] Require labels (app, environment, team)
+  - [ ] Disallow `latest` image tag
+  - [ ] Require read-only root filesystem
+  - [ ] Disallow hostPath volumes
+  - [ ] Require non-root user (runAsNonRoot: true)
+- [ ] Apply CIS Kubernetes Benchmark policies via Kyverno (from kyverno/policies repo)
+- [ ] Configure Kyverno in audit mode first, then enforce after validating no breakage
 
-### 4.3 Tetragon
-- [ ] Deploy Tetragon
-- [ ] Configure TracingPolicies for process and network events
-- [ ] Verify event stream via `tetra getevents`
+### 4.5 Image signing (supply chain security)
 
-### 4.4 Trivy
-- [ ] Add Trivy scanning stage to GitLab CI pipeline template
-- [ ] Configure to fail on Critical/High CVEs
-- [ ] Integrate scan results with GitLab Security Dashboard
+- [ ] Install Cosign in GitLab CI runner
+- [ ] Generate Cosign key pair, store private key in OpenBao
+- [ ] Add Cosign signing step to GitLab CI after successful build and Trivy scan:
+  `cosign sign --key <key-from-openbao> registry.dream.lab/image:tag`
+- [ ] Add Kyverno policy to require signed images in production namespace:
+  - [ ] Verify signature against known public key
+  - [ ] Block unsigned images from deploying to `production` namespace
+- [ ] Test policy: verify unsigned image is blocked, signed image is allowed
+- [ ] Document signing workflow in [docs/supply-chain-security.md](supply-chain-security.md)
+
+### 4.6 Tetragon
+
+- [ ] Deploy Tetragon via ArgoCD
+- [ ] Configure TracingPolicies for:
+  - [ ] Process execution events (unexpected shells, curl, wget in containers)
+  - [ ] File access events (sensitive paths: /etc/passwd, /proc/*, /var/run/secrets)
+  - [ ] Network events (unexpected outbound connections)
+- [ ] Verify event stream: `tetra getevents`
+- [ ] Configure Tetragon JSON output → OTel Collector → Loki (after Phase 5)
+- [ ] Write at least one custom TracingPolicy for a known attack pattern (e.g., crypto miner detection)
+
+### 4.7 Dependency-Track (SCA and SBOM)
+
+- [ ] Deploy Dependency-Track (API server + frontend) via ArgoCD
+- [ ] Generate SBOM on every build in GitLab CI using Syft:
+  `syft packages registry.dream.lab/image:tag -o cyclonedx-json > sbom.json`
+- [ ] Push SBOM to Dependency-Track from GitLab CI after each successful build
+- [ ] Configure vulnerability feeds (NVD, OSV)
+- [ ] Set alert thresholds: CRITICAL findings block merge via GitLab CI gate
+- [ ] Document SBOM workflow in [docs/supply-chain-security.md](supply-chain-security.md)
+
+### 4.8 Phase 4 security checkpoint
+
+- [ ] All production-namespace workloads pass Kyverno policies without exceptions
+- [ ] All images in Container Registry are Cosign-signed
+- [ ] Tetragon events are flowing to Loki (verify after Phase 5)
+- [ ] Dependency-Track shows zero CRITICAL vulnerabilities in platform images
+- [ ] Kubescape score improved vs baseline from 4.1
+- [ ] Update [docs/threat-model.md](threat-model.md) with runtime security coverage
 
 ---
 
@@ -296,55 +401,55 @@ Order is strict within this phase.
 - [ ] Configure obfuscated WireGuard tunnel
 - [ ] Test connectivity through RU ISP DPI
 
-### 8.2 Image signing (supply chain security)
-- [ ] Configure Cosign signing in GitLab CI (sign on push)
-- [ ] Add Kyverno policy to require signed images in production namespaces
-- [ ] Verify policy blocks unsigned images
+### 8.2 Go tool: OpenBao secret rotator
 
-### 8.3 Additional hardening
-- [ ] Apply CIS Kubernetes Benchmark policies via Kyverno
-- [ ] Configure OpenBao audit logging
-- [ ] Configure GitLab audit events → Loki
-- [ ] Review and tighten Tetragon TracingPolicies
+> A custom Go CLI tool that demonstrates ability to build security tooling, not just deploy it.
 
-### 8.4 SonarQube (SAST and code quality)
+- [ ] Create subdirectory `tools/bao-rotator/`
+- [ ] Implement CLI tool in Go with the following capabilities:
+  - [ ] Connect to OpenBao via AppRole authentication (reads credentials from env or K8s secret)
+  - [ ] List secrets at a given path with their metadata (created_time, last_rotated)
+  - [ ] Rotate a secret at a given path (generate new value, write to OpenBao, log the event)
+  - [ ] Output structured JSON logs compatible with Loki (timestamp, action, path, actor)
+  - [ ] Dry-run mode: show what would be rotated without making changes
+- [ ] Add Kubernetes CronJob manifest to run rotation on schedule
+- [ ] Write unit tests (Go testing package, mock OpenBao client)
+- [ ] Add to GitLab CI: build, test, Trivy scan, Cosign sign
+- [ ] Document usage in `docs/bao-rotator.md`
+
+**Stack:** Go + OpenBao API client + cobra CLI + structured logging (slog)
+
+### 8.3 SonarQube (SAST and code quality)
 - [ ] Deploy SonarQube Community Edition
 - [ ] Integrate with GitLab CI (sonar-scanner stage in pipeline templates)
 - [ ] Configure quality gates to block merge on critical issues
 - [ ] Enable secrets detection and security hotspot review
 
-### 8.5 Dependency-Track (SCA and SBOM)
-- [ ] Deploy Dependency-Track (API server + frontend)
-- [ ] Generate SBOM on every build (Syft or CycloneDX Gradle/Maven plugin)
-- [ ] Push SBOM to Dependency-Track from GitLab CI
-- [ ] Configure vulnerability feed (NVD, OSV) and alert thresholds
+### 8.4 Dependency-Track (extended SCA)
+- [ ] Extend Phase 4.7 Dependency-Track with multi-project SBOM aggregation
+- [ ] Configure integration with SonarQube findings
+- [ ] Set up custom component license policies
 
-### 8.6 Keycloak (SSO and OIDC)
+### 8.5 Keycloak (SSO and OIDC)
 - [ ] Deploy Keycloak
 - [ ] Configure OIDC integration for: GitLab, ArgoCD, Grafana, OpenBao
 - [ ] Set up roles and groups mirroring platform access model
 - [ ] Enable MFA for admin accounts
 
-### 8.7 Velero (cluster backup and restore)
+### 8.6 Velero (cluster backup and restore)
 - [ ] Deploy Velero with MinIO as S3 backend
 - [ ] Configure scheduled backups (cluster state, PVCs)
 - [ ] Document and test restore procedure
 - [ ] Verify backup integrity with a test restore to a vCluster
 
-### 8.8 Chaos Mesh (chaos engineering)
+### 8.7 Chaos Mesh (chaos engineering)
 - [ ] Deploy Chaos Mesh
 - [ ] Define baseline SLOs for platform services (Prometheus rules)
 - [ ] Run initial chaos experiments: pod kill, network partition, disk pressure
 - [ ] Verify observability stack captures events correctly
 
-### 8.9 Backstage (internal developer portal)
+### 8.8 Backstage (internal developer portal)
 - [ ] Deploy Backstage
 - [ ] Integrate with GitLab as catalog source (GitLab discovery plugin)
 - [ ] Register all platform services in the Software Catalog
 - [ ] Add TechDocs integration for documentation-as-code
-
-### 8.10 Kubescape (K8s security posture)
-- [ ] Deploy Kubescape operator
-- [ ] Run NSA/CISA and CIS benchmark scans
-- [ ] Configure continuous scanning and trend reporting
-- [ ] Expose results in Grafana dashboard
