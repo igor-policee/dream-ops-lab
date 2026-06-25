@@ -94,7 +94,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | architecture.md | Current — dev-ubuntu-01 added as named system element |
 | network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
 | roadmap.md | Current — Phase 4 expanded, security checkpoints, ESO Phase 3.5, GPU Phase 7, Phase 3.9/4.8/4.9/5.9 added for Go tools |
-| decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
+| decisions.md | Current — all major architectural decisions recorded (Talos, Cilium, ArgoCD, ESO, cert-manager, DevSecOps tools, Gateway API, Go tooling) |
 | runbooks.md | Current — GitLab backup added, retention 3 days everywhere, full recovery procedures |
 | threat-model.md | Current — skeleton with assets, trust boundaries, 4 threat scenarios; updated per phase |
 | supply-chain-security.md | Current — SLSA L2 target, Gitleaks/Checkov/Trivy/Syft/Cosign/Dependency-Track pipeline |
