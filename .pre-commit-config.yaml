@@ -59,14 +59,16 @@ repos:
           - --hook-config=--add-apache-license-2.0=false
 
   # ── Formatting ────────────────────────────────────────────────────────────
-  # Unified code style for YAML, JSON, and Markdown
+  # Unified code style for YAML and JSON.
+  # Markdown excluded: Prettier collapses numbered lists that don't start at 1,
+  # which corrupts intentional multi-section sequential numbering in docs.
   # Note: pre-commit/mirrors-prettier is archived; rbubley/mirrors-prettier
   # is the actively maintained community fork with stable releases only
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.8.0
     hooks:
       - id: prettier
-        types_or: [yaml, json, markdown]
+        types_or: [yaml, json]
 
   # ── Linting ───────────────────────────────────────────────────────────────
   # Lint bash/sh scripts: catches unsafe quoting, bad patterns, portability issues
