@@ -5,6 +5,116 @@ system context and [decisions.md](decisions.md) for rationale behind each choice
 
 ---
 
+## Host Preparation (Phase 0)
+
+### Prerequisites
+
+Install Ansible collections before running any playbook:
+
+```bash
+cd ansible/
+ansible-galaxy collection install -r requirements.yml
+```
+
+Configure host-specific variables in `ansible/group_vars/homelab.yml`:
+
+```yaml
+autossh_remote_user: <user on dev-ubuntu-01>      # replace
+autossh_remote_bind_port: <port on dev-ubuntu-01>  # replace
+```
+
+Ensure the SSH key `/root/.ssh/id_ed25519` is authorized on dev-ubuntu-01:
+
+```bash
+ssh-copy-id -i /root/.ssh/id_ed25519.pub <user>@dev-ubuntu-01
+```
+
+---
+
+### Phase 0.0 — Security baseline
+
+```bash
+# Install pre-commit framework
+pipx install pre-commit
+
+# Activate hooks in the repo
+cd /path/to/dream-ops-lab
+pre-commit install
+
+# Initial scan of all existing files
+pre-commit run --all-files
+
+# Install Checkov (IaC scanner)
+pipx install checkov
+
+# Run Checkov against IaC files
+checkov -d .
+
+# Verify LVM free space (should be ~828 GB)
+vgdisplay ubuntu-vg | grep "Free  PE"
+```
+
+---
+
+### Phase 0.1 — Remove libvirt stack
+
+> **Destructive.** Destroys all running libvirt VMs. Confirm VM state before running.
+
+```bash
+ansible-playbook phase-0.yml -e libvirt_removal=true --tags libvirt_removal
+```
+
+Verify after completion:
+
+```bash
+lsmod | grep kvm        # kvm module must still be loaded
+which qemu-system-x86_64  # qemu-kvm must still be present
+```
+
+---
+
+### Phase 0.2–0.4 — Install and configure Incus
+
+```bash
+ansible-playbook phase-0.yml --tags incus
+```
+
+Verify:
+
+```bash
+incus info                    # Incus daemon running, version shown
+incus storage list            # incus-pool present, driver: zfs
+incus network list            # incusbr0 present, 10.10.0.1/24
+zpool status incus-pool       # ONLINE
+```
+
+---
+
+### Phase 0.5 — Configure autossh reverse tunnel
+
+```bash
+ansible-playbook phase-0.yml --tags autossh
+```
+
+Verify:
+
+```bash
+systemctl status autossh-tunnel    # active (running)
+journalctl -u autossh-tunnel -n 20  # no errors
+# From dev-ubuntu-01:
+ssh -p <autossh_remote_bind_port> root@localhost  # should reach homelab-ubuntu
+```
+
+---
+
+### Run all of Phase 0 (except libvirt removal)
+
+```bash
+ansible-playbook phase-0.yml
+```
+
+---
+
 ## Backup and Recovery
 
 ### Overview
@@ -377,12 +487,12 @@ incus exec gitlab-01 -- gitlab-rake gitlab:check SANITIZE=true
 
 Restore components in this sequence after a catastrophic host failure:
 
-| Order | Component | Reason |
-|-------|-----------|--------|
-| 1 | step-ca-01 | All TLS certificates depend on it; must exist before anything requests a cert |
-| 2 | openbao-01 | Holds Talos configs, kubeconfig, tokens required to rebuild K8s |
-| 3 | gitlab-01 | GitOps source; cluster self-heals once ArgoCD reconnects |
-| 4 | Kubernetes nodes | Re-provision with `talosctl` using configs retrieved from OpenBao |
+| Order | Component        | Reason                                                                        |
+| ----- | ---------------- | ----------------------------------------------------------------------------- |
+| 1     | step-ca-01       | All TLS certificates depend on it; must exist before anything requests a cert |
+| 2     | openbao-01       | Holds Talos configs, kubeconfig, tokens required to rebuild K8s               |
+| 3     | gitlab-01        | GitOps source; cluster self-heals once ArgoCD reconnects                      |
+| 4     | Kubernetes nodes | Re-provision with `talosctl` using configs retrieved from OpenBao             |
 
 ---
 

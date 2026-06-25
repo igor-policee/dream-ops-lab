@@ -9,39 +9,39 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Hardware
 
-| Component | Spec |
-|-----------|------|
-| CPU | Intel Core i7 |
-| RAM | 64 GB |
-| Storage | 900 GB SSD |
-| Network | WiFi (802.11, no ethernet) |
+| Component | Spec                       |
+| --------- | -------------------------- |
+| CPU       | Intel Core i7              |
+| RAM       | 64 GB                      |
+| Storage   | 900 GB SSD                 |
+| Network   | WiFi (802.11, no ethernet) |
 
 ## Core Stack
 
-| Layer | Technology |
-|-------|------------|
-| Host OS | Ubuntu 24.04 LTS |
-| Hypervisor | Incus (ZFS storage, NAT bridge) |
-| VM OS | Talos Linux |
-| Kubernetes | latest stable (bundled with selected Talos release) |
-| CNI | Cilium (eBPF, kube-proxy replacement) |
-| Provisioning | OpenTofu + Ansible |
-| Source control / CI | GitLab CE |
-| GitOps | ArgoCD |
-| Container registry | GitLab Container Registry |
-| State backend | GitLab HTTP backend (OpenTofu state) |
-| Internal domain | dream.lab |
-| PKI | step-ca (internal CA, ACME) |
-| Secrets | OpenBao |
-| Policy | Kyverno |
-| Runtime security | Tetragon |
-| Image scanning | Trivy |
-| Observability | kube-prometheus-stack + Loki + Tempo + OTel Collector + Hubble |
-| Object storage | MinIO |
-| Databases | CloudNativePG (PostgreSQL) · Altinity (ClickHouse) |
-| Streaming | Strimzi (Kafka) |
-| Batch processing | Spark Operator |
-| GPU | NVIDIA GPU Operator (RTX 3070 Ti) |
+| Layer               | Technology                                                     |
+| ------------------- | -------------------------------------------------------------- |
+| Host OS             | Ubuntu 24.04 LTS                                               |
+| Hypervisor          | Incus (ZFS storage, NAT bridge)                                |
+| VM OS               | Talos Linux                                                    |
+| Kubernetes          | latest stable (bundled with selected Talos release)            |
+| CNI                 | Cilium (eBPF, kube-proxy replacement)                          |
+| Provisioning        | OpenTofu + Ansible                                             |
+| Source control / CI | GitLab CE                                                      |
+| GitOps              | ArgoCD                                                         |
+| Container registry  | GitLab Container Registry                                      |
+| State backend       | GitLab HTTP backend (OpenTofu state)                           |
+| Internal domain     | dream.lab                                                      |
+| PKI                 | step-ca (internal CA, ACME)                                    |
+| Secrets             | OpenBao                                                        |
+| Policy              | Kyverno                                                        |
+| Runtime security    | Tetragon                                                       |
+| Image scanning      | Trivy                                                          |
+| Observability       | kube-prometheus-stack + Loki + Tempo + OTel Collector + Hubble |
+| Object storage      | MinIO                                                          |
+| Databases           | CloudNativePG (PostgreSQL) · Altinity (ClickHouse)             |
+| Streaming           | Strimzi (Kafka)                                                |
+| Batch processing    | Spark Operator                                                 |
+| GPU                 | NVIDIA GPU Operator (RTX 3070 Ti)                              |
 
 ## Documentation
 
@@ -54,4 +54,4 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Status
 
-> Architecture and stack discussion complete. Go security tooling (`dream-checker`, `bao-rotator`) implemented. No infrastructure deployed yet — implementation begins with Phase 0.
+> Phase 0 Ansible playbooks implemented (Incus, ZFS, autossh). No infrastructure deployed yet — ready to run Phase 0 on the physical host.

@@ -10,15 +10,18 @@ the next begins. Order within a phase is sequential where noted.
 **Tooling:** Ansible
 
 ### 0.0 Pre-flight
+
 > **Must complete before any host configuration changes.**
 
 **Backup and rollback**
+
 - [ ] Confirm backup boundary and risk acceptance: critical secrets and GitLab are backed up; synthetic K8s data is not; risk accepted for lab environment (see Risks in [handoff-context.md](handoff-context.md))
 - [ ] Verify Windows dual-boot (nvme0n1) is not affected by planned changes
 - [ ] Document rollback plan for libvirt removal (snapshot or note current VM state)
 - [ ] Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
 
 **Security baseline**
+
 - [ ] Install pre-commit framework: `pipx install pre-commit`
 - [ ] Create `.pre-commit-config.yaml` in infra repo with Gitleaks hook
 - [ ] Run `pre-commit install` — all future commits checked for secrets automatically
@@ -28,27 +31,32 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Add `.gitleaks.toml` allowlist for known false positives (age key references, example tokens)
 
 ### 0.1 Remove libvirt stack
+
 - [ ] Stop and destroy all 4 running libvirt VMs
 - [ ] Purge libvirt, libvirtd, virt-manager, virtinst packages
 - [ ] Verify kvm kernel module and qemu-kvm are still present
 
 ### 0.2 Install Incus
+
 - [ ] Add Zabbly apt repository
 - [ ] Install incus, incus-base packages
 - [ ] Run `incus admin init` (non-interactive, via Ansible)
 
 ### 0.3 Configure ZFS storage pool
+
 - [ ] Create LVM logical volume in ubuntu-vg (~800 GB)
 - [ ] Create ZFS pool: `zpool create incus-pool /dev/ubuntu-vg/incus-zfs`
 - [ ] Register pool as Incus storage backend
 
 ### 0.4 Configure networking
+
 - [ ] Create incusbr0 bridge (10.10.0.0/24)
 - [ ] Set Incus bridge DNS domain to `dream.lab`
 - [ ] Enable IP forwarding
 - [ ] Configure NAT (nftables/iptables) from incusbr0 → wlp5s0
 
 ### 0.5 Configure remote access
+
 - [ ] Install autossh
 - [ ] Create systemd service for reverse SSH tunnel to dev-ubuntu-01
 - [ ] Enable and start service
@@ -61,6 +69,7 @@ the next begins. Order within a phase is sequential where noted.
 **Tooling:** OpenTofu (VM provisioning) + Ansible (configuration)
 
 ### 1.1 OpenTofu base module
+
 - [ ] Install `age` on host
 - [ ] Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
 - [ ] Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
@@ -71,6 +80,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Run a manual tfstate backup after each `tofu apply` until Phase 1.4 is complete (see "Manual tfstate Backup" in [runbooks.md](runbooks.md))
 
 ### 1.2 Provision and configure step-ca-01
+
 - [ ] Provision VM via OpenTofu
 - [ ] Install step-ca (Ansible)
 - [ ] Initialize PKI: generate root CA and intermediate CA
@@ -78,6 +88,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Export root certificate → distribute to host trust store
 
 ### 1.3 Provision and configure openbao-01
+
 - [ ] Provision VM via OpenTofu
 - [ ] Install OpenBao (Ansible)
 - [ ] Initialize and unseal OpenBao
@@ -87,6 +98,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Store unseal key shards and CA password in Bitwarden (see [runbooks.md](runbooks.md))
 
 ### 1.4 Provision and configure gitlab-01
+
 - [ ] Provision VM via OpenTofu
 - [ ] Install GitLab CE via official package (Ansible)
 - [ ] Obtain TLS certificate from step-ca via ACME
@@ -101,6 +113,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Archive or remove tfstate backups from dev-ubuntu-01 after confirming GitLab state is correct: `ssh dev-ubuntu-01 "rm -rf ~/backups/dream-ops-lab/tfstate"`
 
 ### 1.5 Configure backup automation
+
 - [ ] Create backup directories on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/{step-ca,openbao,gitlab}`
 - [ ] Create dedicated OpenBao backup token with `sys/storage/raft/snapshot` policy
 - [ ] Deploy backup script to host at `/usr/local/bin/dream-ops-backup.sh`
@@ -109,6 +122,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Trigger manual run and verify encrypted files appear on dev-ubuntu-01
 
 ### 1.6 Configure DNS
+
 - [ ] Configure Incus dnsmasq to serve `dream.lab` for VM hostnames (auto-registered as `<hostname>.dream.lab`)
 - [ ] Add static service aliases in dnsmasq — service DNS names use no numbers:
   - [ ] `gitlab.dream.lab` → `gitlab-01`
@@ -136,17 +150,20 @@ the next begins. Order within a phase is sequential where noted.
 **Tooling:** OpenTofu + talosctl
 
 ### 2.1 Prepare Talos configuration
+
 - [ ] Generate Talos secrets: `talosctl gen secrets` → store in OpenBao
 - [ ] Generate machine configs for control plane and workers
 - [ ] Store machine configs in OpenBao
 
 ### 2.2 Provision Talos VMs
+
 - [ ] Provision talos-cp-01 via OpenTofu (Talos ISO image)
 - [ ] Provision talos-worker-01 via OpenTofu
 - [ ] Apply machine configs via talosctl
 - [ ] Note: talos-worker-gpu-01 is provisioned in Phase 7 after host PCI passthrough is configured
 
 ### 2.3 Bootstrap cluster
+
 - [ ] Run `talosctl bootstrap` on talos-cp-01
 - [ ] Wait for control plane to be ready
 - [ ] Generate kubeconfig → store in OpenBao
@@ -172,11 +189,13 @@ the next begins. Order within a phase is sequential where noted.
 Order is strict within this phase.
 
 ### 3.1 Install Cilium
+
 - [ ] Install Cilium via Helm (before ArgoCD — CNI must exist first)
 - [ ] Enable eBPF dataplane, kube-proxy replacement
 - [ ] Verify all nodes Ready
 
 ### 3.2 Configure DNS
+
 - [ ] Install CoreDNS with k8s_gateway plugin (Helm)
 - [ ] Configure k8s_gateway to serve Gateway API resources as DNS records
 - [ ] Create `CiliumLoadBalancerIPPool` reserving 10.10.0.53 for CoreDNS
@@ -187,30 +206,35 @@ Order is strict within this phase.
 - [ ] Verify pod DNS resolution for `dream.lab` and `cluster.local`
 
 ### 3.3 Install cert-manager
+
 - [ ] Deploy cert-manager (Helm)
 - [ ] Create ClusterIssuer pointing to step-ca-01 ACME endpoint
 - [ ] Verify certificate issuance with a test Certificate resource
 
 ### 3.4 Bootstrap ArgoCD
+
 - [ ] Deploy ArgoCD (Helm)
 - [ ] Configure ArgoCD to authenticate with GitLab
 
 ### 3.5 Bootstrap External Secrets Operator
+
 > ESO must be deployed before the App-of-Apps so that secret-dependent applications
 > can start syncing immediately once ArgoCD begins managing them.
 
 - [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
 - [ ] Deploy External Secrets Operator via Helm with `--create-namespace --namespace external-secrets`
 - [ ] Create ESO auth K8s secret — this secret is permanent; ClusterSecretStore reads AppRole credentials from it via secretRef at runtime:
-  `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
+      `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
 - [ ] Create ClusterSecretStore pointing to openbao-01 referencing the ESO auth secret
 - [ ] Verify secret sync with a test ExternalSecret
 
 ### 3.6 Create App-of-Apps
+
 - [ ] Create App-of-Apps root application in ArgoCD pointing to infrastructure repo
 - [ ] All subsequent deployments managed through ArgoCD
 
 ### 3.7 Configure Cilium Gateway API
+
 - [ ] Enable Gateway API CRDs
 - [ ] Create GatewayClass and default Gateway
 - [ ] Verify platform service routing (test with a sample HTTPRoute)
@@ -280,7 +304,7 @@ Order is strict within this phase.
 - [ ] Install Cosign in GitLab CI runner
 - [ ] Generate Cosign key pair, store private key in OpenBao
 - [ ] Add Cosign signing step to GitLab CI after successful build and Trivy scan:
-  `cosign sign --key <key-from-openbao> registry.dream.lab/image:tag`
+      `cosign sign --key <key-from-openbao> registry.dream.lab/image:tag`
 - [ ] Add Kyverno policy to require signed images in production namespace:
   - [ ] Verify signature against known public key
   - [ ] Block unsigned images from deploying to `production` namespace
@@ -292,7 +316,7 @@ Order is strict within this phase.
 - [ ] Deploy Tetragon via ArgoCD
 - [ ] Configure TracingPolicies for:
   - [ ] Process execution events (unexpected shells, curl, wget in containers)
-  - [ ] File access events (sensitive paths: /etc/passwd, /proc/*, /var/run/secrets)
+  - [ ] File access events (sensitive paths: /etc/passwd, /proc/\*, /var/run/secrets)
   - [ ] Network events (unexpected outbound connections)
 - [ ] Verify event stream: `tetra getevents`
 - [ ] Write at least one custom TracingPolicy for a known attack pattern (e.g., crypto miner detection)
@@ -302,7 +326,7 @@ Order is strict within this phase.
 
 - [ ] Deploy Dependency-Track (API server + frontend) via ArgoCD
 - [ ] Generate SBOM on every build in GitLab CI using Syft:
-  `syft packages registry.dream.lab/image:tag -o cyclonedx-json > sbom.json`
+      `syft packages registry.dream.lab/image:tag -o cyclonedx-json > sbom.json`
 - [ ] Push SBOM to Dependency-Track from GitLab CI after each successful build
 - [ ] Configure vulnerability feeds (NVD, OSV)
 - [ ] Set alert thresholds: CRITICAL findings block merge via GitLab CI gate
@@ -338,38 +362,46 @@ Order is strict within this phase.
 **Tooling:** ArgoCD
 
 ### 5.1 MinIO
+
 - [ ] Deploy MinIO (standalone mode)
 - [ ] Create buckets: loki, tempo, spark, data
 - [ ] Configure lifecycle policies
 
 ### 5.2 kube-prometheus-stack
+
 - [ ] Deploy Prometheus + Alertmanager + Grafana
 - [ ] Configure scraping for all platform components
 - [ ] Import baseline K8s dashboards
 
 ### 5.3 Loki
+
 - [ ] Deploy Loki
 - [ ] Deploy Promtail / OTel Collector as log forwarder on each node
 - [ ] Configure MinIO as Loki storage backend
 
 ### 5.4 Tempo
+
 - [ ] Deploy Tempo
 - [ ] Configure MinIO as Tempo storage backend
 
 ### 5.5 OpenTelemetry Collector
+
 - [ ] Deploy OTel Collector as DaemonSet
 - [ ] Configure pipelines: metrics → Prometheus, logs → Loki, traces → Tempo
 
 ### 5.6 Hubble
+
 - [ ] Enable Hubble UI (included with Cilium)
 - [ ] Expose via Gateway API
 - [ ] Verify network flow visibility
 
 ### 5.7 Grafana datasources
+
 - [ ] Configure Prometheus, Loki, Tempo datasources
 - [ ] Create unified dashboards for platform health
 
 ### 5.8 Security-observability integration
+
 > Complete Phase 4 items that depend on the observability stack.
 
 - [ ] Create Kubescape ServiceMonitor (CRD now available from Phase 5.2) and verify Prometheus scrapes metrics
@@ -397,21 +429,25 @@ Order is strict within this phase.
 **Tooling:** ArgoCD
 
 ### 6.1 CloudNativePG
+
 - [ ] Deploy CloudNativePG operator
 - [ ] Create initial PostgreSQL cluster (3-instance HA)
 - [ ] Configure backups to MinIO
 
 ### 6.2 ClickHouse
+
 - [ ] Deploy Altinity clickhouse-operator
 - [ ] Create initial ClickHouse cluster
 - [ ] Configure backups to MinIO
 
 ### 6.3 Strimzi (Kafka)
+
 - [ ] Deploy Strimzi operator
 - [ ] Create Kafka cluster (3 brokers, KRaft mode)
 - [ ] Create initial topics
 
 ### 6.4 Spark Operator
+
 - [ ] Deploy Spark Operator
 - [ ] Run test SparkApplication to verify cluster connectivity
 
@@ -425,16 +461,19 @@ At this point the cluster has two nodes (talos-cp-01 + talos-worker-01) from Pha
 talos-worker-gpu-01 is added here as a third node after host PCI passthrough is ready.
 
 ### 7.1 Configure PCI passthrough on host
+
 - [ ] Enable IOMMU in GRUB (intel_iommu=on)
 - [ ] Bind RTX 3070 Ti to vfio-pci driver (Ansible)
 - [ ] Verify GPU in VFIO group: `ls /sys/bus/pci/drivers/vfio-pci`
 
 ### 7.2 Provision talos-worker-gpu-01
+
 - [ ] Provision VM via OpenTofu with GPU PCI passthrough config
 - [ ] Apply Talos machine config
 - [ ] Add node to existing cluster, verify it joins: `kubectl get nodes`
 
 ### 7.3 NVIDIA GPU Operator
+
 - [ ] Deploy NVIDIA GPU Operator via ArgoCD
 - [ ] Verify GPU resource available: `kubectl describe node talos-worker-gpu-01`
 - [ ] Run test GPU workload (CUDA vector-add)
@@ -448,6 +487,7 @@ talos-worker-gpu-01 is added here as a third node after host PCI passthrough is 
 > adopted, dropped, or reprioritized as the platform evolves.
 
 ### 8.1 AmneziaWG (alternative remote access)
+
 - [ ] Install AmneziaWG on host and dev-ubuntu-01
 - [ ] Configure obfuscated WireGuard tunnel
 - [ ] Test connectivity through RU ISP DPI
@@ -464,35 +504,41 @@ talos-worker-gpu-01 is added here as a third node after host PCI passthrough is 
 **Stack:** Go + OpenBao API client + cobra CLI + structured logging (slog)
 
 ### 8.3 SonarQube (SAST and code quality)
+
 - [ ] Deploy SonarQube Community Edition
 - [ ] Integrate with GitLab CI (sonar-scanner stage in pipeline templates)
 - [ ] Configure quality gates to block merge on critical issues
 - [ ] Enable secrets detection and security hotspot review
 
 ### 8.4 Dependency-Track (extended SCA)
+
 - [ ] Extend Phase 4.6 Dependency-Track with multi-project SBOM aggregation
 - [ ] Configure integration with SonarQube findings
 - [ ] Set up custom component license policies
 
 ### 8.5 Keycloak (SSO and OIDC)
+
 - [ ] Deploy Keycloak
 - [ ] Configure OIDC integration for: GitLab, ArgoCD, Grafana, OpenBao
 - [ ] Set up roles and groups mirroring platform access model
 - [ ] Enable MFA for admin accounts
 
 ### 8.6 Velero (cluster backup and restore)
+
 - [ ] Deploy Velero with MinIO as S3 backend
 - [ ] Configure scheduled backups (cluster state, PVCs)
 - [ ] Document and test restore procedure
 - [ ] Verify backup integrity with a test restore to a vCluster
 
 ### 8.7 Chaos Mesh (chaos engineering)
+
 - [ ] Deploy Chaos Mesh
 - [ ] Define baseline SLOs for platform services (Prometheus rules)
 - [ ] Run initial chaos experiments: pod kill, network partition, disk pressure
 - [ ] Verify observability stack captures events correctly
 
 ### 8.8 Backstage (internal developer portal)
+
 - [ ] Deploy Backstage
 - [ ] Integrate with GitLab as catalog source (GitLab discovery plugin)
 - [ ] Register all platform services in the Software Catalog

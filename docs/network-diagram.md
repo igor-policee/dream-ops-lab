@@ -80,9 +80,9 @@ Pod
 
 ## DNS server responsibilities
 
-| Server | Address | Authoritative for | Forwards to | On unknown dream.lab |
-|--------|---------|-------------------|-------------|----------------------|
-| Incus dnsmasq | 10.10.0.1 | VM hostnames in `dream.lab` | CoreDNS (platform names), router (internet) | NXDOMAIN — does not forward back |
+| Server                | Address    | Authoritative for                     | Forwards to                                   | On unknown dream.lab             |
+| --------------------- | ---------- | ------------------------------------- | --------------------------------------------- | -------------------------------- |
+| Incus dnsmasq         | 10.10.0.1  | VM hostnames in `dream.lab`           | CoreDNS (platform names), router (internet)   | NXDOMAIN — does not forward back |
 | CoreDNS + k8s_gateway | 10.10.0.53 | Platform service names in `dream.lab` | Incus dnsmasq (VM names), upstream (internet) | NXDOMAIN — does not forward back |
 
 ---
@@ -118,11 +118,11 @@ Service DNS names use no numeric suffix. VM hostnames (with suffix) are also
 resolvable but are used only for direct VM access (SSH, incus exec), not in
 application config, certificates, or URLs.
 
-| Service | DNS name | VM hostname | Resolved by |
-|---------|----------|-------------|-------------|
-| GitLab | gitlab.dream.lab | gitlab-01.dream.lab | Incus dnsmasq (static alias) |
-| OpenBao | openbao.dream.lab | openbao-01.dream.lab | Incus dnsmasq (static alias) |
-| step-ca | step-ca.dream.lab | step-ca-01.dream.lab | Incus dnsmasq (static alias) |
-| ArgoCD | argocd.dream.lab | — | CoreDNS / k8s_gateway |
-| Grafana | grafana.dream.lab | — | CoreDNS / k8s_gateway |
+| Service | DNS name              | VM hostname           | Resolved by                   |
+| ------- | --------------------- | --------------------- | ----------------------------- |
+| GitLab  | gitlab.dream.lab      | gitlab-01.dream.lab   | Incus dnsmasq (static alias)  |
+| OpenBao | openbao.dream.lab     | openbao-01.dream.lab  | Incus dnsmasq (static alias)  |
+| step-ca | step-ca.dream.lab     | step-ca-01.dream.lab  | Incus dnsmasq (static alias)  |
+| ArgoCD  | argocd.dream.lab      | —                     | CoreDNS / k8s_gateway         |
+| Grafana | grafana.dream.lab     | —                     | CoreDNS / k8s_gateway         |
 | K8s API | talos-cp-01.dream.lab | talos-cp-01.dream.lab | Incus dnsmasq (hostname only) |

@@ -7,21 +7,21 @@ Kubernetes cluster on top. All layers follow an immutable, API-driven approach.
 
 ## Physical Host
 
-| Component | Detail |
-|-----------|--------|
-| Hostname | homelab-ubuntu |
-| Hardware | MSI MAG Z590 Codex X5 |
-| CPU | Intel Core i7-11700KF @ 3.60 GHz (8 cores / 16 threads) |
-| RAM | 64 GB |
-| OS | Ubuntu 24.04.4 LTS |
-| Kernel | 6.8.0-110-generic |
+| Component | Detail                                                  |
+| --------- | ------------------------------------------------------- |
+| Hostname  | homelab-ubuntu                                          |
+| Hardware  | MSI MAG Z590 Codex X5                                   |
+| CPU       | Intel Core i7-11700KF @ 3.60 GHz (8 cores / 16 threads) |
+| RAM       | 64 GB                                                   |
+| OS        | Ubuntu 24.04.4 LTS                                      |
+| Kernel    | 6.8.0-110-generic                                       |
 
 ### Storage
 
-| Device | Size | Role |
-|--------|------|------|
-| sda | 931.5 GB | Ubuntu (LVM). Only 100 GB allocated to root LV; ~828 GB free in VG — reserved for Incus storage pool |
-| nvme0n1 | 953.9 GB | Windows (dual boot, NTFS) — do not modify |
+| Device  | Size     | Role                                                                                                 |
+| ------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| sda     | 931.5 GB | Ubuntu (LVM). Only 100 GB allocated to root LV; ~828 GB free in VG — reserved for Incus storage pool |
+| nvme0n1 | 953.9 GB | Windows (dual boot, NTFS) — do not modify                                                            |
 
 ### Hypervisor stack
 
@@ -54,15 +54,15 @@ No remote API or TLS configuration required.
 
 ### VM inventory
 
-| VM | vCPU | RAM | Disk | Role |
-|----|------|-----|------|------|
-| step-ca-01 | 1 | 1 GB | 10 GB | Internal PKI / CA — provisioned first |
-| openbao-01 | 1 | 2 GB | 20 GB | Secrets management — provisioned before K8s |
-| gitlab-01 | 4 | 6 GB | 200 GB | GitLab CE + Container Registry |
-| talos-cp-01 | 2 | 4 GB | 100 GB | Kubernetes control plane (single node) |
-| talos-worker-01 | 6 | 20 GB | 200 GB | Platform services |
-| talos-worker-gpu-01 | 6 | 20 GB | 200 GB | Platform services + GPU workloads (RTX 3070 Ti passthrough) |
-| **Total** | **20** | **53 GB** | **730 GB** | |
+| VM                  | vCPU   | RAM       | Disk       | Role                                                        |
+| ------------------- | ------ | --------- | ---------- | ----------------------------------------------------------- |
+| step-ca-01          | 1      | 1 GB      | 10 GB      | Internal PKI / CA — provisioned first                       |
+| openbao-01          | 1      | 2 GB      | 20 GB      | Secrets management — provisioned before K8s                 |
+| gitlab-01           | 4      | 6 GB      | 200 GB     | GitLab CE + Container Registry                              |
+| talos-cp-01         | 2      | 4 GB      | 100 GB     | Kubernetes control plane (single node)                      |
+| talos-worker-01     | 6      | 20 GB     | 200 GB     | Platform services                                           |
+| talos-worker-gpu-01 | 6      | 20 GB     | 200 GB     | Platform services + GPU workloads (RTX 3070 Ti passthrough) |
+| **Total**           | **20** | **53 GB** | **730 GB** |                                                             |
 
 Host budget: 64 GB RAM (11 GB reserve), ~828 GB disk (98 GB free), 16 threads.
 vCPU overcommit is intentional and acceptable for a lab environment.
@@ -116,9 +116,9 @@ Ad-hoc local port forwarding is used when browser access to internal UIs is need
 
 A VPS with a fixed public IP, online 24/7. Serves two roles in the platform:
 
-| Role | Details |
-|------|---------|
-| Remote access endpoint | Accepts the reverse SSH tunnel from the physical host; provides external SSH entry point |
+| Role                    | Details                                                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Remote access endpoint  | Accepts the reverse SSH tunnel from the physical host; provides external SSH entry point                                            |
 | Off-site backup storage | Stores encrypted backups of critical VM data (OpenBao snapshots, step-ca CA material, GitLab data, OpenTofu state during bootstrap) |
 
 The physical host is turned on and off as needed. dev-ubuntu-01 is always reachable,
@@ -140,6 +140,7 @@ Two servers with distinct roles. See [network-diagram.md](network-diagram.md) fo
 full resolution flow.
 
 **Incus dnsmasq** (10.10.0.1, on incusbr0):
+
 - Authoritative for VM hostnames within `dream.lab` (auto-registered on VM start)
 - Hosts static service aliases for standalone VMs (see naming convention below)
 - Forwards unresolved `dream.lab` queries to CoreDNS
@@ -147,6 +148,7 @@ full resolution flow.
 - Forwards all other queries upstream (router / internet)
 
 **CoreDNS** (stable IP via Cilium LoadBalancer, reachable from incusbr0):
+
 - Authoritative for platform service names in `dream.lab` via the `k8s_gateway` plugin
 - `k8s_gateway` watches Gateway API resources and auto-generates DNS records
 - Handles `*.cluster.local` for K8s internal service discovery
@@ -162,11 +164,11 @@ This prevents infinite loops for non-existent names.
 VM hostnames use a numeric suffix (`gitlab-01`, `step-ca-01`). DNS service names
 used in URLs, certificates, and application config do not:
 
-| VM hostname | Service DNS name | Resolved by |
-|-------------|-----------------|-------------|
-| gitlab-01 | gitlab.dream.lab | Incus dnsmasq (static alias) |
-| step-ca-01 | step-ca.dream.lab | Incus dnsmasq (static alias) |
-| openbao-01 | openbao.dream.lab | Incus dnsmasq (static alias) |
+| VM hostname | Service DNS name      | Resolved by                      |
+| ----------- | --------------------- | -------------------------------- |
+| gitlab-01   | gitlab.dream.lab      | Incus dnsmasq (static alias)     |
+| step-ca-01  | step-ca.dream.lab     | Incus dnsmasq (static alias)     |
+| openbao-01  | openbao.dream.lab     | Incus dnsmasq (static alias)     |
 | talos-cp-01 | talos-cp-01.dream.lab | Incus dnsmasq (VM hostname only) |
 
 Kubernetes nodes are addressed by hostname only — they expose no user-facing service DNS name.
@@ -188,33 +190,33 @@ exists and during cluster rebuilds.
 
 ### Hardware
 
-| Component | Detail |
-|-----------|--------|
-| GPU | NVIDIA RTX 3070 Ti (PCI passthrough via Incus to worker VM) |
+| Component | Detail                                                      |
+| --------- | ----------------------------------------------------------- |
+| GPU       | NVIDIA RTX 3070 Ti (PCI passthrough via Incus to worker VM) |
 
 ### Service catalogue
 
-| Category | Solution |
-|----------|----------|
-| GitOps | ArgoCD |
-| Certificates | cert-manager (ACME → step-ca-01) |
-| Secrets (K8s workloads) | OpenBao (served from openbao-01 VM) |
-| Policy | Kyverno |
-| Runtime security | Tetragon |
-| Image scanning | Trivy |
-| Metrics | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
-| Logs | Loki |
-| Traces | Tempo |
-| Telemetry collection | OpenTelemetry Collector |
-| Network observability | Cilium Hubble (included with Cilium) |
-| Object storage | MinIO |
-| Streaming | Strimzi (Kafka operator) |
-| Batch processing | Spark Operator |
-| PostgreSQL | CloudNativePG (CNPG) |
-| ClickHouse | Altinity clickhouse-operator |
-| GPU | NVIDIA GPU Operator |
-| GitLab Runner | Kubernetes executor (pod-based) |
-| Container registry | GitLab Container Registry (built into gitlab-01) |
+| Category                | Solution                                                    |
+| ----------------------- | ----------------------------------------------------------- |
+| GitOps                  | ArgoCD                                                      |
+| Certificates            | cert-manager (ACME → step-ca-01)                            |
+| Secrets (K8s workloads) | OpenBao (served from openbao-01 VM)                         |
+| Policy                  | Kyverno                                                     |
+| Runtime security        | Tetragon                                                    |
+| Image scanning          | Trivy                                                       |
+| Metrics                 | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
+| Logs                    | Loki                                                        |
+| Traces                  | Tempo                                                       |
+| Telemetry collection    | OpenTelemetry Collector                                     |
+| Network observability   | Cilium Hubble (included with Cilium)                        |
+| Object storage          | MinIO                                                       |
+| Streaming               | Strimzi (Kafka operator)                                    |
+| Batch processing        | Spark Operator                                              |
+| PostgreSQL              | CloudNativePG (CNPG)                                        |
+| ClickHouse              | Altinity clickhouse-operator                                |
+| GPU                     | NVIDIA GPU Operator                                         |
+| GitLab Runner           | Kubernetes executor (pod-based)                             |
+| Container registry      | GitLab Container Registry (built into gitlab-01)            |
 
 ## Operational Data
 
@@ -243,27 +245,26 @@ terraform {
 Durable operational secrets are managed in OpenBao. No secrets are stored in Git.
 On-disk exceptions with a documented lifecycle:
 
-| Item | Location | Lifecycle |
-|------|----------|-----------|
-| OpenTofu state (bootstrap) | host filesystem | Removed after `tofu init -migrate-state` in Phase 1.4 |
-| OpenBao backup token | `/root/.openbao-backup-token` | Least-privilege read-only token; renewed periodically |
+| Item                       | Location                      | Lifecycle                                             |
+| -------------------------- | ----------------------------- | ----------------------------------------------------- |
+| OpenTofu state (bootstrap) | host filesystem               | Removed after `tofu init -migrate-state` in Phase 1.4 |
+| OpenBao backup token       | `/root/.openbao-backup-token` | Least-privilege read-only token; renewed periodically |
 
-| Data | Storage |
-|------|---------|
+| Data                                 | Storage |
+| ------------------------------------ | ------- |
 | Talos secrets (PKI, machine configs) | OpenBao |
-| kubeconfig | OpenBao |
-| Ansible sensitive variables | OpenBao |
-| GitLab tokens, API keys | OpenBao |
+| kubeconfig                           | OpenBao |
+| Ansible sensitive variables          | OpenBao |
+| GitLab tokens, API keys              | OpenBao |
 
 ## Automation Model
 
-| Layer | Tool | Scope |
-|-------|------|-------|
-| Host OS | Manual | Ubuntu install, SSH keys, base user setup |
-| Host configuration | Ansible | Incus install, ZFS pool, bridge network, autossh service |
-| VM provisioning | OpenTofu | Incus VMs, Talos machine configs |
-| GitLab configuration | Ansible | GitLab CE install and configuration inside the GitLab VM |
-| step-ca configuration | Ansible | step-ca install and configuration inside the step-ca-01 VM |
-| OpenBao configuration | Ansible | OpenBao install and configuration inside the openbao-01 VM |
-| Kubernetes workloads | ArgoCD (GitOps) | Platform services, applications |
-
+| Layer                 | Tool            | Scope                                                      |
+| --------------------- | --------------- | ---------------------------------------------------------- |
+| Host OS               | Manual          | Ubuntu install, SSH keys, base user setup                  |
+| Host configuration    | Ansible         | Incus install, ZFS pool, bridge network, autossh service   |
+| VM provisioning       | OpenTofu        | Incus VMs, Talos machine configs                           |
+| GitLab configuration  | Ansible         | GitLab CE install and configuration inside the GitLab VM   |
+| step-ca configuration | Ansible         | step-ca install and configuration inside the step-ca-01 VM |
+| OpenBao configuration | Ansible         | OpenBao install and configuration inside the openbao-01 VM |
+| Kubernetes workloads  | ArgoCD (GitOps) | Platform services, applications                            |

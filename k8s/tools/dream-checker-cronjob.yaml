@@ -19,7 +19,8 @@ spec:
           containers:
             - name: dream-checker
               image: registry.dream.lab/dream-checker:v0.1.0
-              command: ["dream-checker", "all", "--output", "json", "--all-namespaces"]
+              command:
+                ["dream-checker", "all", "--output", "json", "--all-namespaces"]
               env:
                 - name: VAULT_ADDR
                   value: "https://openbao.dream.lab:8200"

@@ -37,18 +37,18 @@ bao-rotator audit kv
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `VAULT_ADDR` | OpenBao/Vault address (e.g. `https://openbao.dream.lab:8200`) |
-| `VAULT_TOKEN` | Token with KV read/write and metadata access |
+| Variable      | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| `VAULT_ADDR`  | OpenBao/Vault address (e.g. `https://openbao.dream.lab:8200`) |
+| `VAULT_TOKEN` | Token with KV read/write and metadata access                  |
 
 Both can be overridden with `--addr` and `--token` flags.
 
 ## Rotation Policy
 
-| Threshold | Behavior |
-|-----------|----------|
-| < 90 days | `audit`: reports OK |
+| Threshold | Behavior                               |
+| --------- | -------------------------------------- |
+| < 90 days | `audit`: reports OK                    |
 | ≥ 90 days | `audit`: reports WARN — needs rotation |
 
 `audit` traverses the KV v2 path tree recursively; keys at all nesting levels

@@ -66,6 +66,7 @@ box. It supports state locking and versioning, requires no additional infrastruc
 and keeps state alongside the code under the same access control model as GitLab.
 
 **Alternatives considered:**
+
 - MinIO S3 backend — requires separate locking mechanism; adds complexity.
 - Local file — not shareable, no locking, lost on machine failure.
 
@@ -95,14 +96,14 @@ bootstrap sequence.
 
 **Decision:** Allocate resources as follows:
 
-| VM | vCPU | RAM | Disk |
-|----|------|-----|------|
-| step-ca-01 | 1 | 1 GB | 10 GB |
-| openbao-01 | 1 | 2 GB | 20 GB |
-| gitlab-01 | 4 | 6 GB | 200 GB |
-| talos-cp-01 | 2 | 4 GB | 100 GB |
-| talos-worker-01 | 6 | 20 GB | 200 GB |
-| talos-worker-gpu-01 | 6 | 20 GB | 200 GB |
+| VM                  | vCPU | RAM   | Disk   |
+| ------------------- | ---- | ----- | ------ |
+| step-ca-01          | 1    | 1 GB  | 10 GB  |
+| openbao-01          | 1    | 2 GB  | 20 GB  |
+| gitlab-01           | 4    | 6 GB  | 200 GB |
+| talos-cp-01         | 2    | 4 GB  | 100 GB |
+| talos-worker-01     | 6    | 20 GB | 200 GB |
+| talos-worker-gpu-01 | 6    | 20 GB | 200 GB |
 
 talos-worker-gpu-01 runs the full platform services workload alongside GPU jobs.
 The `-gpu` suffix in the name signals that the node has GPU resources available
@@ -138,23 +139,23 @@ simultaneously. A single CP node saves ~8 GB RAM and 4 vCPU for worker workloads
 
 **Decision:** The following services run inside Kubernetes, managed by ArgoCD.
 
-| Category | Solution |
-|----------|----------|
-| Secrets | OpenBao (open-source Vault fork, MPL license) |
-| Policy | Kyverno |
-| Runtime security | Tetragon (eBPF, Cilium ecosystem) |
-| Image scanning | Trivy |
-| Metrics | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
-| Logs | Loki |
-| Traces | Tempo |
-| Telemetry collection | OpenTelemetry Collector |
-| Network observability | Cilium Hubble |
-| Object storage | MinIO (S3-compatible) |
-| Streaming | Strimzi (Kafka operator) |
-| Batch processing | Spark Operator |
-| PostgreSQL | CloudNativePG (CNPG) |
-| ClickHouse | Altinity clickhouse-operator |
-| GPU | NVIDIA GPU Operator |
+| Category              | Solution                                                    |
+| --------------------- | ----------------------------------------------------------- |
+| Secrets               | OpenBao (open-source Vault fork, MPL license)               |
+| Policy                | Kyverno                                                     |
+| Runtime security      | Tetragon (eBPF, Cilium ecosystem)                           |
+| Image scanning        | Trivy                                                       |
+| Metrics               | kube-prometheus-stack (Prometheus + Alertmanager + Grafana) |
+| Logs                  | Loki                                                        |
+| Traces                | Tempo                                                       |
+| Telemetry collection  | OpenTelemetry Collector                                     |
+| Network observability | Cilium Hubble                                               |
+| Object storage        | MinIO (S3-compatible)                                       |
+| Streaming             | Strimzi (Kafka operator)                                    |
+| Batch processing      | Spark Operator                                              |
+| PostgreSQL            | CloudNativePG (CNPG)                                        |
+| ClickHouse            | Altinity clickhouse-operator                                |
+| GPU                   | NVIDIA GPU Operator                                         |
 
 **Reason:** Each tool is selected as the most modern, K8s-native solution in its
 category. The stack forms a complete base platform enabling DevSecOps, AI/ML (GPU),
@@ -176,6 +177,7 @@ and big data workloads.
 - **Altinity clickhouse-operator** — de facto standard for ClickHouse on K8s.
 
 **Alternatives considered:**
+
 - VictoriaMetrics over Prometheus — lighter but less standard; Prometheus chosen
   for wider ecosystem and learning value.
 - HashiCorp Vault — BSL license excludes it from open-source use cases.
@@ -209,6 +211,7 @@ WiFi uplink (wlp5s0).
 limitation. NAT bridge is the only viable option without additional hardware.
 
 **Alternatives considered:**
+
 - Direct L2 bridge to wlp5s0 — not possible on WiFi
 - Incus OVN — adds complexity with no benefit given single-host setup
 
@@ -228,6 +231,7 @@ simplest reliable solution. Works on standard SSH port, avoids DPI/TSPU filterin
 issues relevant to the operating region (Russia).
 
 **Alternatives considered:**
+
 - WireGuard — more capable but subject to DPI filtering by Russian ISPs
 - AmneziaWG (obfuscated WireGuard) — viable future option, deferred to end of project
 - SOCKS5 proxy — considered but unnecessary; direct SSH to host provides equivalent access
@@ -254,6 +258,7 @@ browsers and tools once. No public CA trust.
 ## 2026-06-24 — Two-tier DNS: Incus dnsmasq + CoreDNS with k8s_gateway
 
 **Decision:** Use two DNS servers with distinct roles:
+
 - Incus dnsmasq: authoritative for VM hostnames, auto-registered
 - CoreDNS + k8s_gateway plugin: authoritative for platform service names in K8s
 
@@ -267,6 +272,7 @@ auto-registers DNS records when Gateway API resources are created — no manual
 DNS management. Single domain `dream.lab` spans both layers transparently.
 
 **Alternatives considered:**
+
 - Static hosts file — does not scale, manual management
 - External DNS server (separate VM) — adds unnecessary component
 - CoreDNS only — would not auto-register VM names from Incus
@@ -300,11 +306,11 @@ infrastructure dependency — its availability and backup must be maintained.
 include the numeric VM suffix. VM hostnames (with suffix) are resolvable but used
 only for direct VM access.
 
-| VM hostname | Service DNS name |
-|-------------|-----------------|
-| gitlab-01 | gitlab.dream.lab |
-| step-ca-01 | step-ca.dream.lab |
-| openbao-01 | openbao.dream.lab |
+| VM hostname | Service DNS name  |
+| ----------- | ----------------- |
+| gitlab-01   | gitlab.dream.lab  |
+| step-ca-01  | step-ca.dream.lab |
+| openbao-01  | openbao.dream.lab |
 
 Implemented via static aliases in Incus dnsmasq (CNAME or address records).
 
@@ -355,14 +361,14 @@ negligible for a single-host lab. ZFS ARC memory usage is configurable.
 
 **Decision:** Divide automation responsibility across four layers with no overlap.
 
-| Layer | Tool |
-|-------|------|
-| Host OS install | Manual |
-| Host configuration | Ansible |
-| VM provisioning | OpenTofu (incus provider, local Unix socket) |
-| GitLab configuration | Ansible (inside the GitLab VM) |
-| step-ca configuration | Ansible (inside the step-ca-01 VM) |
-| Kubernetes workloads | ArgoCD (GitOps, source in GitLab) |
+| Layer                 | Tool                                         |
+| --------------------- | -------------------------------------------- |
+| Host OS install       | Manual                                       |
+| Host configuration    | Ansible                                      |
+| VM provisioning       | OpenTofu (incus provider, local Unix socket) |
+| GitLab configuration  | Ansible (inside the GitLab VM)               |
+| step-ca configuration | Ansible (inside the step-ca-01 VM)           |
+| Kubernetes workloads  | ArgoCD (GitOps, source in GitLab)            |
 
 **Reason:** Each tool is used at the layer where it provides the most value. Ansible
 is idempotent and appropriate for host-level config. OpenTofu manages declarative
@@ -425,6 +431,7 @@ on the host — only the public key is embedded in the script. The private key l
 in Bitwarden and is only needed for recovery.
 
 **Alternatives considered:**
+
 - Symmetric encryption (GPG/age -p): requires the passphrase on the host for
   automation, creating a secret that must be protected there.
 - Bitwarden file attachments for backups: Premium supports it, but Bitwarden is
@@ -454,6 +461,7 @@ to dev-ubuntu-01 is simpler: no external accounts, no temporary service to set u
 and the same backup infrastructure already covers OpenBao and step-ca.
 
 **Alternatives considered:**
+
 - gitlab.com as temporary backend: zero setup, but introduces external SaaS dependency.
 - Lightweight HTTP state server on dev-ubuntu-01 (e.g., terrastate): avoids local
   state but adds a new service to operate on dev-ubuntu-01.
@@ -511,6 +519,7 @@ compatible with Loki ingestion. The `vault kv` CLI does not support recursive li
 or policy-based age auditing without custom scripting.
 
 **Go** was chosen for both tools because:
+
 - `k8s.io/client-go` and `github.com/hashicorp/vault/api` provide typed K8s and
   OpenBao access with in-cluster auth support
 - Single static binary output simplifies container images (multi-stage Dockerfile,
@@ -518,6 +527,7 @@ or policy-based age auditing without custom scripting.
 - Strong type system and table-driven tests support long-term maintenance
 
 **Alternatives considered:**
+
 - Shell scripts wrapping `kubectl`, `vault`, `step`, `cosign` — fragmented output
   formats, no unified exit code contract, harder to test
 - Python with kubernetes/hvac libraries — viable but heavier container image,
@@ -526,6 +536,7 @@ or policy-based age auditing without custom scripting.
   invocation patterns and no shared output schema
 
 **Trade-offs:**
+
 - Custom code requires maintenance; checked mitigated by unit tests and CI
 - `go.sum` must be committed (generated via `go mod tidy` — first step of Phase 3.9)
   before CI builds are reproducible
@@ -549,6 +560,7 @@ GPU passthrough and kernel parameters are expressed in the machine config, keepi
 all node state in a single auditable artifact stored in OpenBao.
 
 **Alternatives considered:**
+
 - Ubuntu + kubeadm — mutable OS; configuration drift risk; SSH access; does not
   fit immutable philosophy; Ansible required for node configuration
 - k3s — simplified distribution; reduced control surfaces; insufficient for a
@@ -557,6 +569,7 @@ all node state in a single auditable artifact stored in OpenBao.
 - Flatcar Container Linux — immutable, but smaller K8s provisioning tooling ecosystem
 
 **Trade-offs:**
+
 - No SSH access to nodes; debugging uses `talosctl logs`, container exec, or the
   Talos API — requires learning the Talos toolchain
 - Machine config is the only path to reconfigure a node; config must be stored
@@ -591,6 +604,7 @@ the platform in a single component:
   eBPF state, enabling correlated network + process security events
 
 **Alternatives considered:**
+
 - Flannel — simple VXLAN overlay; no eBPF, no security, no observability; not
   suitable for a security-focused platform
 - Calico — mature, eBPF optional, strong NetworkPolicy; lacks native Gateway API
@@ -598,6 +612,7 @@ the platform in a single component:
 - Weave Net — legacy; no longer actively developed for Kubernetes
 
 **Trade-offs:**
+
 - Requires kernel ≥ 5.10 for full eBPF support; Ubuntu 24.04 with kernel 6.8
   satisfies this
 - kube-proxy replacement must be set at Cilium install time; cannot be changed
@@ -615,8 +630,9 @@ workloads are deployed and reconciled through ArgoCD. A single root ArgoCD Appli
 (App-of-Apps) in the infrastructure repo drives all other applications.
 
 **Reason:**
+
 - Declarative GitOps model: cluster state is derived from Git; no manual `kubectl
-  apply` in steady-state operations; configuration drift is detected and corrected
+apply` in steady-state operations; configuration drift is detected and corrected
   automatically
 - ArgoCD provides a rich UI for observing sync status, resource health, and rollback
 - App-of-Apps pattern: adding a new service means adding one `Application` manifest
@@ -625,6 +641,7 @@ workloads are deployed and reconciled through ArgoCD. A single root ArgoCD Appli
   large community and plugin ecosystem
 
 **Alternatives considered:**
+
 - Flux — lighter, GitOps Toolkit; no built-in UI; better for operator-driven
   deployment; less discoverable for learning and troubleshooting
 - Helm only — no continuous reconciliation; configuration drift is not detected;
@@ -633,6 +650,7 @@ workloads are deployed and reconciled through ArgoCD. A single root ArgoCD Appli
   no self-healing on manual changes
 
 **Trade-offs:**
+
 - ArgoCD must be bootstrapped via Helm (Phase 3.4) before it can manage anything;
   the bootstrap is the one imperative step in the otherwise declarative model
 - ArgoCD is not available if the cluster is down; infrastructure operations still
@@ -653,6 +671,7 @@ which OpenBao KV path maps to which K8s Secret — ESO handles sync and rotation
 automatically.
 
 AppRole was chosen over Kubernetes auth because:
+
 - AppRole is pull-based with explicit `role_id` + `secret_id`; no dependency on
   Kubernetes API availability at auth time
 - Kubernetes auth requires OpenBao to reach the Kubernetes API to validate service
@@ -668,6 +687,7 @@ ESO is deployed before App-of-Apps so that secret-dependent applications can beg
 syncing immediately when ArgoCD starts managing them in Phase 3.6.
 
 **Alternatives considered:**
+
 - Vault Agent Injector / vault-k8s sidecar — injects secrets as sidecar containers;
   tighter per-pod coupling; harder to audit at the K8s manifest level
 - ESO with Kubernetes auth — eliminates the permanent secret but introduces auth-time
@@ -676,6 +696,7 @@ syncing immediately when ArgoCD starts managing them in Phase 3.6.
   if encrypted; ESO preferred for centralised secret management in OpenBao
 
 **Trade-offs:**
+
 - The ESO AppRole Kubernetes Secret must not be deleted accidentally; document
   as a named operational risk (see handoff-context.md)
 - All ESO-synced secrets are plaintext in etcd; Talos encrypts etcd at rest by default
@@ -699,12 +720,14 @@ allows dream-checker to monitor expiry and Ready status via the cert-manager API
 without requiring RBAC access to raw Secret data.
 
 **Alternatives considered:**
+
 - Self-signed `ClusterIssuer` inside K8s — no central CA; certificates are not
   trusted outside the cluster without per-client trust store configuration
 - Wildcard certificate managed externally and mounted as a K8s Secret — no
   automatic renewal; manual rotation required; not scalable beyond a few services
 
 **Trade-offs:**
+
 - cert-manager depends on step-ca-01 being reachable at issuance and renewal time;
   step-ca-01 is outside K8s specifically to ensure this independence
 - The step-ca root certificate must be added to the Kubernetes trust bundle before
@@ -717,17 +740,18 @@ without requiring RBAC access to raw Secret data.
 **Decision:** Use the following tools for security posture, supply chain security,
 and compliance:
 
-| Domain | Tool | Integration |
-|--------|------|-------------|
-| Secret scanning | Gitleaks | pre-commit hook + GitLab CI |
-| IaC scanning | Checkov | GitLab CI, SARIF output |
-| K8s posture | Kubescape | In-cluster operator, Prometheus + Grafana (Phase 5.8) |
-| Image scanning | Trivy | GitLab CI (image + IaC + secret scan), SARIF output |
-| Image signing | Cosign | GitLab CI, key in OpenBao, enforced via Kyverno verifyImages |
-| SBOM generation | Syft | GitLab CI (CycloneDX format) |
-| SCA / vuln management | Dependency-Track | In-cluster (Phase 4.6), NVD + OSV feeds, CI upload gate |
-| Runtime security | Tetragon | In-cluster (Phase 4.7), custom TracingPolicies, Loki integration |
-| Policy enforcement | Kyverno | In-cluster (Phase 4.2), CIS benchmark policies, verifyImages |
+| Domain                | Tool             | Integration                                                      |
+| --------------------- | ---------------- | ---------------------------------------------------------------- |
+| Secret scanning       | Gitleaks         | pre-commit hook + GitLab CI                                      |
+| IaC scanning          | Checkov          | pre-commit hook + GitLab CI, SARIF output                        |
+| Dockerfile linting    | Hadolint         | pre-commit hook (hadolint-docker)                                |
+| K8s posture           | Kubescape        | In-cluster operator, Prometheus + Grafana (Phase 5.8)            |
+| Image scanning        | Trivy            | GitLab CI (image + IaC + secret scan), SARIF output              |
+| Image signing         | Cosign           | GitLab CI, key in OpenBao, enforced via Kyverno verifyImages     |
+| SBOM generation       | Syft             | GitLab CI (CycloneDX format)                                     |
+| SCA / vuln management | Dependency-Track | In-cluster (Phase 4.6), NVD + OSV feeds, CI upload gate          |
+| Runtime security      | Tetragon         | In-cluster (Phase 4.7), custom TracingPolicies, Loki integration |
+| Policy enforcement    | Kyverno          | In-cluster (Phase 4.2), CIS benchmark policies, verifyImages     |
 
 **Reason per component:**
 
@@ -735,6 +759,9 @@ and compliance:
   via `.gitleaks.toml`; native pre-commit framework integration
 - **Checkov** — multi-framework IaC scanner (Terraform, Ansible, Kubernetes,
   Dockerfile); single tool covering all IaC types in the repo
+- **Hadolint** — Dockerfile linter enforcing best practices (pinned base images,
+  no `latest` tags, pinned package versions, non-root user); catches DL3018 and
+  similar issues as a pre-commit gate before CI runs
 - **Kubescape** — NSA/CISA and CIS K8s benchmarks; in-cluster operator with
   historical tracking; native Prometheus metrics for Grafana dashboard integration
 - **Trivy** — CNCF project; covers images, filesystems, IaC, and secrets in one
@@ -748,6 +775,7 @@ and compliance:
   process visibility; shares eBPF state with Cilium
 
 **Alternatives considered:**
+
 - TruffleHog over Gitleaks — heavier and more complex config; Gitleaks preferred
 - tfsec/KICS over Checkov — single-framework; Checkov covers all IaC types
 - Falco over Tetragon — kernel-module based; Tetragon preferred for eBPF coherence
@@ -755,6 +783,7 @@ and compliance:
 - GitLab Security Dashboard — requires Ultimate license (see next decision)
 
 **Trade-offs:**
+
 - Multiple tools require coordination; `dream-checker` supply module (SUPPLY-001..005)
   provides a unified availability check across all tools
 - SLSA Level 2 is the target (signed images + build provenance); Level 3 requires
@@ -778,12 +807,14 @@ Dependency-Track fills the gap: persistent CVE tracking, NVD/OSV feed integratio
 component inventory across all projects, policy-based CI gates — all self-hosted.
 
 **Alternatives considered:**
+
 - GitLab.com Ultimate free trial — temporary; introduces external SaaS dependency
 - Self-hosted GitLab EE — license required; not appropriate for a lab
 - DefectDojo — open-source security aggregator; more complex to operate; better fit
   for multi-team enterprise environments than a single-operator lab
 
 **Trade-offs:**
+
 - No GitLab MR security widget; developers check Dependency-Track or pipeline
   SARIF artifacts directly
 - Dependency-Track is an additional in-cluster service to operate (Phase 4.6)
@@ -797,6 +828,7 @@ for HTTP/HTTPS traffic routing to platform services. Cilium is the implementatio
 No Ingress controller is deployed.
 
 **Reason:**
+
 - Gateway API is the official successor to the Kubernetes Ingress API; Ingress is
   frozen and not being extended further
 - Cilium implements Gateway API natively via eBPF — no additional pod-based
@@ -808,6 +840,7 @@ No Ingress controller is deployed.
   developers manage `HTTPRoute` (routing rules); cleaner for a multi-service platform
 
 **Alternatives considered:**
+
 - nginx Ingress controller — mature; requires a separate deployment; Ingress API
   is limited (no traffic splitting or header matching without annotations)
 - Traefik — flexible middleware; adds another component; does not integrate with
@@ -816,6 +849,7 @@ No Ingress controller is deployed.
   for advanced routing
 
 **Trade-offs:**
+
 - Gateway API CRDs must be installed before enabling Cilium Gateway API (Phase 3.7)
 - Less community tooling for edge cases than Ingress, but sufficient for all
   platform use cases

@@ -9,31 +9,31 @@ The goal is SLSA Level 2 compliance for all platform images.
 
 ### Source (GitLab)
 
-| Control | Tool | Stage |
-|---------|------|-------|
-| Secret detection | Gitleaks (pre-commit) | Developer workstation |
-| Secret detection | Gitleaks (CI) | GitLab CI: every push |
-| IaC misconfiguration | Checkov | GitLab CI: every push |
-| Dependency vulnerabilities | Dependency-Track | GitLab CI: every build |
+| Control                    | Tool                  | Stage                  |
+| -------------------------- | --------------------- | ---------------------- |
+| Secret detection           | Gitleaks (pre-commit) | Developer workstation  |
+| Secret detection           | Gitleaks (CI)         | GitLab CI: every push  |
+| IaC misconfiguration       | Checkov               | GitLab CI: every push  |
+| Dependency vulnerabilities | Dependency-Track      | GitLab CI: every build |
 
 ### Build (GitLab CI)
 
-| Control | Tool | Stage |
-|---------|------|-------|
-| Image vulnerability scan | Trivy | After docker build |
-| IaC scan | Trivy config | Every push with K8s manifests |
-| SBOM generation | Syft (CycloneDX format) | After docker build |
-| SBOM upload | Dependency-Track API | After Syft |
-| Image signing | Cosign | After Trivy passes |
+| Control                  | Tool                    | Stage                         |
+| ------------------------ | ----------------------- | ----------------------------- |
+| Image vulnerability scan | Trivy                   | After docker build            |
+| IaC scan                 | Trivy config            | Every push with K8s manifests |
+| SBOM generation          | Syft (CycloneDX format) | After docker build            |
+| SBOM upload              | Dependency-Track API    | After Syft                    |
+| Image signing            | Cosign                  | After Trivy passes            |
 
 ### Deploy (ArgoCD + Kubernetes)
 
-| Control | Tool | Stage |
-|---------|------|-------|
-| Signature verification | Kyverno (verifyImages policy) | Admission control |
-| Policy compliance | Kyverno | Admission control |
-| Runtime anomaly detection | Tetragon | Runtime |
-| Continuous vulnerability scan | Trivy Operator | Continuous |
+| Control                       | Tool                          | Stage             |
+| ----------------------------- | ----------------------------- | ----------------- |
+| Signature verification        | Kyverno (verifyImages policy) | Admission control |
+| Policy compliance             | Kyverno                       | Admission control |
+| Runtime anomaly detection     | Tetragon                      | Runtime           |
+| Continuous vulnerability scan | Trivy Operator                | Continuous        |
 
 ## Signing key management
 
@@ -53,11 +53,11 @@ The goal is SLSA Level 2 compliance for all platform images.
 
 ## SLSA compliance status
 
-| Requirement | Level | Status |
-|-------------|-------|--------|
-| Version controlled source | L1 | GitLab |
-| Scripted build | L1 | GitLab CI |
-| Build service | L2 | GitLab Runner in K8s |
-| Provenance available | L2 | Cosign attestation |
-| Provenance authenticated | L2 | Cosign signature |
-| Non-falsifiable provenance | L3 | Not implemented (would require SLSA generator action) |
+| Requirement                | Level | Status                                                |
+| -------------------------- | ----- | ----------------------------------------------------- |
+| Version controlled source  | L1    | GitLab                                                |
+| Scripted build             | L1    | GitLab CI                                             |
+| Build service              | L2    | GitLab Runner in K8s                                  |
+| Provenance available       | L2    | Cosign attestation                                    |
+| Provenance authenticated   | L2    | Cosign signature                                      |
+| Non-falsifiable provenance | L3    | Not implemented (would require SLSA generator action) |

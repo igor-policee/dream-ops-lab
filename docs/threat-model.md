@@ -13,30 +13,31 @@ via dev-ubuntu-01.
 
 ## Assets
 
-| Asset | Sensitivity | Location |
-|-------|-------------|----------|
-| CA root key | CRITICAL | step-ca-01 `/etc/step-ca/secrets/` |
-| OpenBao unseal keys | CRITICAL | Bitwarden (offline, 5 shards, threshold 3-of-5) |
-| Talos secrets bundle | HIGH | OpenBao `talos/secrets` |
-| kubeconfig | HIGH | OpenBao `k8s/kubeconfig` |
-| GitLab root token | HIGH | OpenBao `gitlab/root-token` |
-| Cosign private key | HIGH | OpenBao `supply-chain/cosign-key` |
-| OpenBao backup token | LOW | Host `/root/.openbao-backup-token` (read-only, raft snapshot only) |
+| Asset                | Sensitivity | Location                                                           |
+| -------------------- | ----------- | ------------------------------------------------------------------ |
+| CA root key          | CRITICAL    | step-ca-01 `/etc/step-ca/secrets/`                                 |
+| OpenBao unseal keys  | CRITICAL    | Bitwarden (offline, 5 shards, threshold 3-of-5)                    |
+| Talos secrets bundle | HIGH        | OpenBao `talos/secrets`                                            |
+| kubeconfig           | HIGH        | OpenBao `k8s/kubeconfig`                                           |
+| GitLab root token    | HIGH        | OpenBao `gitlab/root-token`                                        |
+| Cosign private key   | HIGH        | OpenBao `supply-chain/cosign-key`                                  |
+| OpenBao backup token | LOW         | Host `/root/.openbao-backup-token` (read-only, raft snapshot only) |
 
 ## Trust boundaries
 
-| Boundary | Control |
-|----------|---------|
-| Internet → host | Reverse SSH tunnel only; key-based auth; no password auth |
-| Host → VMs | incusbr0 bridge; NAT outbound; no inbound from VMs to host by default |
-| VM → VM | No explicit firewall (lab); mitigated by K8s NetworkPolicy for workloads |
-| Pod → Pod (K8s) | Cilium NetworkPolicy; default-deny baseline |
-| Pod → OpenBao | AppRole authentication; least-privilege policies |
-| GitLab CI → K8s | ServiceAccount with scoped RBAC; no cluster-admin |
+| Boundary        | Control                                                                  |
+| --------------- | ------------------------------------------------------------------------ |
+| Internet → host | Reverse SSH tunnel only; key-based auth; no password auth                |
+| Host → VMs      | incusbr0 bridge; NAT outbound; no inbound from VMs to host by default    |
+| VM → VM         | No explicit firewall (lab); mitigated by K8s NetworkPolicy for workloads |
+| Pod → Pod (K8s) | Cilium NetworkPolicy; default-deny baseline                              |
+| Pod → OpenBao   | AppRole authentication; least-privilege policies                         |
+| GitLab CI → K8s | ServiceAccount with scoped RBAC; no cluster-admin                        |
 
 ## Threat scenarios
 
 ### T1: Compromised GitLab runner pod
+
 **Attack path:** Malicious dependency in build → RCE in runner pod → access to K8s
 ServiceAccount token → lateral movement.
 
@@ -48,6 +49,7 @@ RBAC (scoped ServiceAccount).
 ---
 
 ### T2: Compromised container image
+
 **Attack path:** Supply chain attack on base image → deployed to cluster → runtime exploit.
 
 **Controls:** Trivy scan in CI (known CVEs), Cosign signing (integrity), Kyverno
@@ -59,6 +61,7 @@ RBAC (scoped ServiceAccount).
 ---
 
 ### T3: Exposed OpenBao credentials
+
 **Attack path:** Secret leaked in Git or logs → attacker authenticates to OpenBao
 → reads all secrets.
 
@@ -71,6 +74,7 @@ read CA material.
 ---
 
 ### T4: Compromised step-ca
+
 **Attack path:** RCE on step-ca-01 VM → access to root CA key → forge certificates
 for any `dream.lab` domain.
 
@@ -83,18 +87,18 @@ CA key passphrase stored in Bitwarden only.
 
 ## Phase completion status
 
-| Phase | Checkpoint | Status |
-|-------|-----------|--------|
-| Phase 1 | 1.7 security checkpoint | Not started |
-| Phase 2 | 2.4 kube-bench baseline | Not started |
+| Phase   | Checkpoint                            | Status      |
+| ------- | ------------------------------------- | ----------- |
+| Phase 1 | 1.7 security checkpoint               | Not started |
+| Phase 2 | 2.4 kube-bench baseline               | Not started |
 | Phase 3 | 3.8 Kubescape baseline, network model | Not started |
-| Phase 4 | 4.7 runtime security coverage | Not started |
+| Phase 4 | 4.7 runtime security coverage         | Not started |
 
 ## Residual risks
 
-| Risk | Accepted? | Reason |
-|------|-----------|--------|
-| No VM-to-VM firewall rules on incusbr0 | Yes | Lab environment; K8s NetworkPolicy covers workloads |
-| Single control plane node | Yes | Lab environment; etcd backup via Velero (Phase 8.6) |
-| WiFi uplink (no redundancy) | Yes | Lab environment; physical access available |
-| OpenBao auto-unseal not configured | Yes | Lab environment; manual unseal on restart is acceptable |
+| Risk                                   | Accepted? | Reason                                                  |
+| -------------------------------------- | --------- | ------------------------------------------------------- |
+| No VM-to-VM firewall rules on incusbr0 | Yes       | Lab environment; K8s NetworkPolicy covers workloads     |
+| Single control plane node              | Yes       | Lab environment; etcd backup via Velero (Phase 8.6)     |
+| WiFi uplink (no redundancy)            | Yes       | Lab environment; physical access available              |
+| OpenBao auto-unseal not configured     | Yes       | Lab environment; manual unseal on restart is acceptable |
