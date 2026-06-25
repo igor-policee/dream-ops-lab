@@ -199,9 +199,9 @@ Order is strict within this phase.
 > can start syncing immediately once ArgoCD begins managing them.
 
 - [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
+- [ ] Deploy External Secrets Operator via Helm with `--create-namespace --namespace external-secrets`
 - [ ] Create ESO auth K8s secret — this secret is permanent; ClusterSecretStore reads AppRole credentials from it via secretRef at runtime:
   `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
-- [ ] Deploy External Secrets Operator via Helm
 - [ ] Create ClusterSecretStore pointing to openbao-01 referencing the ESO auth secret
 - [ ] Verify secret sync with a test ExternalSecret
 
@@ -238,9 +238,9 @@ Order is strict within this phase.
 
 - [ ] Deploy Kubescape operator via ArgoCD
 - [ ] Run NSA/CISA and CIS benchmark scans
-- [ ] Configure continuous scanning and create ServiceMonitor manifest for Prometheus scraping
+- [ ] Configure continuous scanning and expose metrics endpoint; add `app: kubescape` labels for future scraping
 - [ ] Fix all CRITICAL findings before proceeding to 4.2
-- [ ] Note: Prometheus scraping activation and Grafana dashboard completed in Phase 5.8 after observability stack is up
+- [ ] Note: ServiceMonitor and Grafana dashboard created in Phase 5.8 — ServiceMonitor CRD requires kube-prometheus-stack from Phase 5.2
 
 ### 4.2 Trivy in CI pipeline
 
@@ -347,7 +347,8 @@ Order is strict within this phase.
 ### 5.8 Security-observability integration
 > Complete Phase 4 items that depend on the observability stack.
 
-- [ ] Enable Kubescape Prometheus scraping (ServiceMonitor created in Phase 4.1) and build Grafana dashboard
+- [ ] Create Kubescape ServiceMonitor (CRD now available from Phase 5.2) and verify Prometheus scrapes metrics
+- [ ] Build Grafana dashboard for Kubescape posture scores
 - [ ] Configure Tetragon JSON output → OTel Collector → Loki pipeline
 - [ ] Verify Tetragon security events are searchable in Loki
 - [ ] Verify Dependency-Track findings are visible alongside platform metrics in Grafana (via Prometheus exporter or Loki alerts)
