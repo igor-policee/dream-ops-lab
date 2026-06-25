@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: bao-rotator
+  namespace: security
+spec:
+  schedule: "0 2 * * 0"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: bao-rotator
+          restartPolicy: OnFailure
+          containers:
+            - name: bao-rotator
+              image: registry.dream.lab/bao-rotator:v0.1.0
+              command: ["bao-rotator", "audit", "kv"]
+              env:
+                - name: VAULT_ADDR
+                  value: "https://openbao.dream.lab:8200"
+                - name: VAULT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: bao-rotator-vault-token
+                      key: token
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bao-rotator
+  namespace: security

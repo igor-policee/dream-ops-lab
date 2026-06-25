@@ -2,8 +2,8 @@
 
 ## Current State
 
-Architecture and stack discussion in progress. No infrastructure has been deployed.
-The repository contains documentation only.
+Architecture and stack discussion complete. No infrastructure has been deployed.
+The repository contains documentation and Go tooling source code.
 
 **Physical host status:** Ubuntu 24.04.4 LTS (kernel 6.8.0-110-generic), libvirt fully
 installed and active. 4 VMs currently running on libvirt — must be stopped and removed
@@ -66,6 +66,11 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 37. **Threat model** — living document updated at each phase security checkpoint
 38. **Supply chain** — documented in supply-chain-security.md (SLSA Level 2 target)
 
+**Go security tooling (2026-06-25):**
+39. **dream-checker** — custom Go CLI (`tools/dream-checker/`); 4 modules: k8s (K8S-001..007), vault (VAULT-001..005), pki (PKI-001..004), supply (SUPPLY-001..005); JSON/table output; bootstrapped in Phase 3.9, CI integration in Phase 4.8/4.9; CronJob in `k8s/tools/`
+40. **bao-rotator** — custom Go CLI (`tools/bao-rotator/`); list/rotate/audit commands for KV v2; 90-day rotation threshold; deployed as CronJob in Phase 4.9; slog-structured output
+41. **Security posture dashboard** — Phase 5.9; Grafana dashboard aggregating dream-checker, Kubescape, Tetragon, Dependency-Track findings from Loki/Prometheus
+
 ## Next Steps
 
 Architecture discussion complete. Implementation begins with Phase 0.
@@ -79,7 +84,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 - [ ] Phase 5 — Observability
 - [ ] Phase 6 — Data platform
 - [ ] Phase 7 — GPU workloads
-- [ ] Phase 8 — Optional (AmneziaWG, Go secret rotator, SonarQube, Keycloak, Velero, Chaos Mesh, Backstage)
+- [ ] Phase 8 — Optional (AmneziaWG, bao-rotator enhancements, SonarQube, Keycloak, Velero, Chaos Mesh, Backstage)
 
 ## Documentation Status
 
@@ -88,11 +93,13 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | README.md | Current |
 | architecture.md | Current — dev-ubuntu-01 added as named system element |
 | network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
-| roadmap.md | Current — Phase 4 expanded, security checkpoints, ESO moved to Phase 3.5, GPU worker to Phase 7, 5.8 security-observability integration added |
+| roadmap.md | Current — Phase 4 expanded, security checkpoints, ESO Phase 3.5, GPU Phase 7, Phase 3.9/4.8/4.9/5.9 added for Go tools |
 | decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
 | runbooks.md | Current — GitLab backup added, retention 3 days everywhere, full recovery procedures |
 | threat-model.md | Current — skeleton with assets, trust boundaries, 4 threat scenarios; updated per phase |
 | supply-chain-security.md | Current — SLSA L2 target, Gitleaks/Checkov/Trivy/Syft/Cosign/Dependency-Track pipeline |
+| docs/tools/dream-checker.md | Current — full module reference, CI integration, CronJob setup |
+| docs/tools/bao-rotator.md | Current — commands, rotation policy, CronJob setup |
 | handoff-context.md | Current |
 
 ## Risks and Constraints

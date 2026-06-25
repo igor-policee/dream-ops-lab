@@ -54,4 +54,4 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Status
 
-> Architecture and stack discussion in progress. No infrastructure deployed yet.
+> Architecture and stack discussion complete. Go security tooling (`dream-checker`, `bao-rotator`) implemented. No infrastructure deployed yet — implementation begins with Phase 0.

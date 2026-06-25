@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dream-checker
+  namespace: security
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: dream-checker
+          restartPolicy: OnFailure
+          containers:
+            - name: dream-checker
+              image: registry.dream.lab/dream-checker:v0.1.0
+              command: ["dream-checker", "all", "--output", "json", "--all-namespaces"]
+              env:
+                - name: VAULT_ADDR
+                  value: "https://openbao.dream.lab:8200"
+                - name: VAULT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: dream-checker-vault-token
+                      key: token
+                - name: STEP_CA_ADDR
+                  value: "step-ca.dream.lab:9000"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dream-checker
+  namespace: security
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dream-checker
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dream-checker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dream-checker
+subjects:
+  - kind: ServiceAccount
+    name: dream-checker
+    namespace: security

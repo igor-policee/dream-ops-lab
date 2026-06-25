@@ -90,7 +90,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Provision VM via OpenTofu
 - [ ] Install GitLab CE via official package (Ansible)
 - [ ] Obtain TLS certificate from step-ca via ACME
-- [ ] Configure GitLab: domain (`gitlab.dream.lab`), registry, SSH
+- [ ] Configure GitLab: domain (`gitlab.dream.lab`), registry external URL (`registry.dream.lab`), SSH
 - [ ] Create GitLab groups and infrastructure repositories
 - [ ] Enable GitLab Container Registry
 - [ ] Create infrastructure project in GitLab and enable the Terraform/OpenTofu state backend
@@ -112,6 +112,7 @@ the next begins. Order within a phase is sequential where noted.
 - [ ] Configure Incus dnsmasq to serve `dream.lab` for VM hostnames (auto-registered as `<hostname>.dream.lab`)
 - [ ] Add static service aliases in dnsmasq — service DNS names use no numbers:
   - [ ] `gitlab.dream.lab` → `gitlab-01`
+  - [ ] `registry.dream.lab` → `gitlab-01` (GitLab Container Registry uses a separate hostname)
   - [ ] `step-ca.dream.lab` → `step-ca-01`
   - [ ] `openbao.dream.lab` → `openbao-01`
 - [ ] Verify both resolve: `gitlab-01.dream.lab` (VM hostname) and `gitlab.dream.lab` (service name)
@@ -226,6 +227,15 @@ Order is strict within this phase.
   - External ingress points
   - Egress policy
 
+### 3.9 Bootstrap dream-checker
+
+- [ ] Run `go mod tidy` in `tools/dream-checker/` and `tools/bao-rotator/` — **required before any `go build` or CI run**; commit both `go.sum` files
+- [ ] Build `tools/dream-checker` binary: `cd tools/dream-checker && go build -o dream-checker .`
+- [ ] Run tests: `go test ./...`
+- [ ] Run all checks manually against the freshly provisioned cluster: `./dream-checker all --all-namespaces`
+- [ ] Review and document all FAIL/WARN findings before proceeding to Phase 4
+- [ ] Note: PKI and VAULT modules require `STEP_CA_ADDR` and `VAULT_ADDR`/`VAULT_TOKEN` env vars
+
 ---
 
 ## Phase 4 — Security and policy
@@ -306,6 +316,21 @@ Order is strict within this phase.
 - [ ] Kubescape score improved vs baseline from Phase 3.8
 - [ ] Update [docs/threat-model.md](threat-model.md) with runtime security coverage
 
+### 4.8 dream-checker: k8s and vault modules in CI
+
+- [ ] Build and push `registry.dream.lab/dream-checker:v0.1.0` (and `:latest` as alias) from `tools/dream-checker/Dockerfile` via GitLab CI
+- [ ] Add dream-checker scan stage to GitLab CI pipeline: `dream-checker all --all-namespaces --output json > dream-checker-report.json`
+- [ ] Store report as CI artifact (expire: 7 days)
+- [ ] Configure CI stage to fail on FAIL status (non-zero exit code)
+
+### 4.9 dream-checker supply module + bao-rotator
+
+- [ ] Build and push `registry.dream.lab/bao-rotator:v0.1.0` (and `:latest` as alias) from `tools/bao-rotator/Dockerfile` via GitLab CI
+- [ ] Build `tools/bao-rotator` binary locally for initial audit: `cd tools/bao-rotator && go build -o bao-rotator ./cmd`
+- [ ] Deploy dream-checker CronJob: `kubectl apply -f k8s/tools/dream-checker-cronjob.yaml`
+- [ ] Deploy bao-rotator CronJob: `kubectl apply -f k8s/tools/bao-rotator-cronjob.yaml`
+- [ ] Run `bao-rotator audit kv` and document initial rotation status
+
 ---
 
 ## Phase 5 — Observability
@@ -352,6 +377,18 @@ Order is strict within this phase.
 - [ ] Configure Tetragon JSON output → OTel Collector → Loki pipeline
 - [ ] Verify Tetragon security events are searchable in Loki
 - [ ] Verify Dependency-Track findings are visible alongside platform metrics in Grafana (via Prometheus exporter or Loki alerts)
+
+### 5.9 Security posture dashboard
+
+- [ ] Configure dream-checker CronJob to emit JSON output to stdout (already set in k8s/tools/dream-checker-cronjob.yaml)
+- [ ] Verify OTel Collector scrapes CronJob pod logs and forwards to Loki
+- [ ] Create Loki queries for dream-checker FAIL/WARN events
+- [ ] Build Grafana dashboard "Security Posture" with panels:
+  - dream-checker check results over time (by module and check ID)
+  - Kubescape score trend
+  - Tetragon event rate (unexpected process executions)
+  - Dependency-Track CRITICAL/HIGH vulnerability count
+- [ ] Set Grafana alerts for: any dream-checker FAIL, Kubescape score regression vs baseline
 
 ---
 
@@ -417,19 +454,12 @@ talos-worker-gpu-01 is added here as a third node after host PCI passthrough is 
 
 ### 8.2 Go tool: OpenBao secret rotator
 
-> A custom Go CLI tool that demonstrates ability to build security tooling, not just deploy it.
+> Implemented in Phase 4.9. This entry tracks extended enhancements.
 
-- [ ] Create subdirectory `tools/bao-rotator/`
-- [ ] Implement CLI tool in Go with the following capabilities:
-  - [ ] Connect to OpenBao via AppRole authentication (reads credentials from env or K8s secret)
-  - [ ] List secrets at a given path with their metadata (created_time, last_rotated)
-  - [ ] Rotate a secret at a given path (generate new value, write to OpenBao, log the event)
-  - [ ] Output structured JSON logs compatible with Loki (timestamp, action, path, actor)
-  - [ ] Dry-run mode: show what would be rotated without making changes
-- [ ] Add Kubernetes CronJob manifest to run rotation on schedule
-- [ ] Write unit tests (Go testing package, mock OpenBao client)
+- [ ] Add dry-run mode: `bao-rotator rotate --dry-run <mount> <path>`
+- [ ] Add AppRole authentication support (currently token-based only)
+- [ ] Output structured JSON logs compatible with Loki (timestamp, action, path, actor)
 - [ ] Add to GitLab CI: build, test, Trivy scan, Cosign sign
-- [ ] Document usage in `docs/bao-rotator.md`
 
 **Stack:** Go + OpenBao API client + cobra CLI + structured logging (slog)
 
