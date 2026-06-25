@@ -88,7 +88,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 | README.md | Current |
 | architecture.md | Current — dev-ubuntu-01 added as named system element |
 | network-diagram.md | Current — dev-ubuntu-01 referenced by hostname |
-| roadmap.md | Current — Phase 4 expanded, security checkpoints added (1.7, 2.4, 3.6, 4.8), Phase 0.6 added |
+| roadmap.md | Current — Phase 4 expanded, security checkpoints, ESO moved to Phase 3.5, GPU worker to Phase 7, 5.8 security-observability integration added |
 | decisions.md | Current — backup strategy and OpenTofu state bootstrap decisions added |
 | runbooks.md | Current — GitLab backup added, retention 3 days everywhere, full recovery procedures |
 | threat-model.md | Current — skeleton with assets, trust boundaries, 4 threat scenarios; updated per phase |

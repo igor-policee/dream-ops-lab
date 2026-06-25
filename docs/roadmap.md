@@ -9,21 +9,20 @@ the next begins. Order within a phase is sequential where noted.
 
 **Tooling:** Ansible
 
-### 0.0 Pre-flight: confirm backup boundary
-> **Must complete before touching any host configuration.**
+### 0.0 Pre-flight
+> **Must complete before any host configuration changes.**
 
+**Backup and rollback**
 - [ ] Confirm backup boundary and risk acceptance: critical secrets and GitLab are backed up; synthetic K8s data is not; risk accepted for lab environment (see Risks in [handoff-context.md](handoff-context.md))
 - [ ] Verify Windows dual-boot (nvme0n1) is not affected by planned changes
 - [ ] Document rollback plan for libvirt removal (snapshot or note current VM state)
 - [ ] Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
 
-### 0.6 Security baseline
-> **Must complete before any host configuration changes.**
-
-- [ ] Install pre-commit framework on host: `pip install pre-commit`
+**Security baseline**
+- [ ] Install pre-commit framework: `pipx install pre-commit`
 - [ ] Create `.pre-commit-config.yaml` in infra repo with Gitleaks hook
 - [ ] Run `pre-commit install` — all future commits checked for secrets automatically
-- [ ] Install Checkov: `pip install checkov`
+- [ ] Install Checkov: `pipx install checkov`
 - [ ] Run initial Checkov scan on existing IaC files (if any): `checkov -d .`
 - [ ] Document findings in `docs/security-baseline.md` (even if zero findings — establishes a baseline)
 - [ ] Add `.gitleaks.toml` allowlist for known false positives (age key references, example tokens)
@@ -142,8 +141,9 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 2.2 Provision Talos VMs
 - [ ] Provision talos-cp-01 via OpenTofu (Talos ISO image)
-- [ ] Provision talos-worker-01, talos-worker-gpu-01 via OpenTofu
+- [ ] Provision talos-worker-01 via OpenTofu
 - [ ] Apply machine configs via talosctl
+- [ ] Note: talos-worker-gpu-01 is provisioned in Phase 7 after host PCI passthrough is configured
 
 ### 2.3 Bootstrap cluster
 - [ ] Run `talosctl bootstrap` on talos-cp-01
@@ -193,15 +193,29 @@ Order is strict within this phase.
 ### 3.4 Bootstrap ArgoCD
 - [ ] Deploy ArgoCD (Helm)
 - [ ] Configure ArgoCD to authenticate with GitLab
-- [ ] Create App-of-Apps root application pointing to infrastructure repo
+
+### 3.5 Bootstrap External Secrets Operator
+> ESO must be deployed before the App-of-Apps so that secret-dependent applications
+> can start syncing immediately once ArgoCD begins managing them.
+
+- [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
+- [ ] Create bootstrap K8s secret with AppRole credentials:
+  `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
+- [ ] Deploy External Secrets Operator via Helm
+- [ ] Create ClusterSecretStore pointing to openbao-01 using the bootstrap secret
+- [ ] Verify secret sync with a test ExternalSecret
+- [ ] Delete bootstrap secret after ESO is operational (ESO manages its own auth from this point)
+
+### 3.6 Create App-of-Apps
+- [ ] Create App-of-Apps root application in ArgoCD pointing to infrastructure repo
 - [ ] All subsequent deployments managed through ArgoCD
 
-### 3.5 Configure Cilium Gateway API
+### 3.7 Configure Cilium Gateway API
 - [ ] Enable Gateway API CRDs
 - [ ] Create GatewayClass and default Gateway
 - [ ] Verify platform service routing (test with a sample HTTPRoute)
 
-### 3.6 Phase 3 security checkpoint
+### 3.8 Phase 3 security checkpoint
 
 - [ ] Verify all platform services have TLS (cert-manager issued certificates from step-ca)
 - [ ] Verify ArgoCD uses OIDC or SSO — no local admin password in use
@@ -226,29 +240,19 @@ Order is strict within this phase.
 - [ ] Deploy Kubescape operator via ArgoCD
 - [ ] Run NSA/CISA and CIS benchmark scans
 - [ ] Configure continuous scanning with results stored in Prometheus metrics
-- [ ] Expose Kubescape dashboard in Grafana (after Phase 5)
 - [ ] Fix all CRITICAL findings before proceeding to 4.2
+- [ ] Note: Grafana dashboard integration completed in Phase 5.8 after observability stack is up
 
-### 4.2 External Secrets Operator
-
-- [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
-- [ ] Create bootstrap K8s secret with AppRole credentials:
-  `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
-- [ ] Deploy External Secrets Operator
-- [ ] Create ClusterSecretStore pointing to openbao-01 using the bootstrap secret
-- [ ] Verify secret sync with a test ExternalSecret
-- [ ] Delete bootstrap secret after ESO is operational (ESO manages its own auth from this point)
-
-### 4.3 Trivy in CI pipeline
+### 4.2 Trivy in CI pipeline
 
 - [ ] Add Trivy scanning stage to GitLab CI pipeline template (`.gitlab-ci.yml` shared template)
 - [ ] Configure to fail on CRITICAL and HIGH CVEs
-- [ ] Configure SARIF output: `trivy image --format sarif --output trivy-results.sarif`
-- [ ] Integrate scan results with GitLab Security Dashboard
+- [ ] Configure SARIF output and store as CI job artifact: `trivy image --format sarif --output trivy-results.sarif`
 - [ ] Add Trivy IaC scan for Kubernetes manifests: `trivy config k8s/`
 - [ ] Add Trivy secret scan: `trivy fs --scanners secret .`
+- [ ] Note: GitLab Security Dashboard requires Ultimate tier; use SARIF artifacts and Dependency-Track for findings visibility in CE
 
-### 4.4 Kyverno
+### 4.3 Kyverno
 
 - [ ] Deploy Kyverno via ArgoCD
 - [ ] Apply baseline policies:
@@ -262,7 +266,7 @@ Order is strict within this phase.
 - [ ] Apply CIS Kubernetes Benchmark policies via Kyverno (from kyverno/policies repo)
 - [ ] Configure Kyverno in audit mode first, then enforce after validating no breakage
 
-### 4.5 Image signing (supply chain security)
+### 4.4 Image signing (supply chain security)
 
 - [ ] Install Cosign in GitLab CI runner
 - [ ] Generate Cosign key pair, store private key in OpenBao
@@ -274,7 +278,7 @@ Order is strict within this phase.
 - [ ] Test policy: verify unsigned image is blocked, signed image is allowed
 - [ ] Document signing workflow in [docs/supply-chain-security.md](supply-chain-security.md)
 
-### 4.6 Tetragon
+### 4.5 Tetragon
 
 - [ ] Deploy Tetragon via ArgoCD
 - [ ] Configure TracingPolicies for:
@@ -282,10 +286,10 @@ Order is strict within this phase.
   - [ ] File access events (sensitive paths: /etc/passwd, /proc/*, /var/run/secrets)
   - [ ] Network events (unexpected outbound connections)
 - [ ] Verify event stream: `tetra getevents`
-- [ ] Configure Tetragon JSON output → OTel Collector → Loki (after Phase 5)
 - [ ] Write at least one custom TracingPolicy for a known attack pattern (e.g., crypto miner detection)
+- [ ] Note: Tetragon → OTel Collector → Loki pipeline configured in Phase 5.8
 
-### 4.7 Dependency-Track (SCA and SBOM)
+### 4.6 Dependency-Track (SCA and SBOM)
 
 - [ ] Deploy Dependency-Track (API server + frontend) via ArgoCD
 - [ ] Generate SBOM on every build in GitLab CI using Syft:
@@ -295,13 +299,12 @@ Order is strict within this phase.
 - [ ] Set alert thresholds: CRITICAL findings block merge via GitLab CI gate
 - [ ] Document SBOM workflow in [docs/supply-chain-security.md](supply-chain-security.md)
 
-### 4.8 Phase 4 security checkpoint
+### 4.7 Phase 4 security checkpoint
 
 - [ ] All production-namespace workloads pass Kyverno policies without exceptions
 - [ ] All images in Container Registry are Cosign-signed
-- [ ] Tetragon events are flowing to Loki (verify after Phase 5)
 - [ ] Dependency-Track shows zero CRITICAL vulnerabilities in platform images
-- [ ] Kubescape score improved vs baseline from 4.1
+- [ ] Kubescape score improved vs baseline from Phase 3.8
 - [ ] Update [docs/threat-model.md](threat-model.md) with runtime security coverage
 
 ---
@@ -342,6 +345,14 @@ Order is strict within this phase.
 - [ ] Configure Prometheus, Loki, Tempo datasources
 - [ ] Create unified dashboards for platform health
 
+### 5.8 Security-observability integration
+> Complete Phase 4 items that depend on the observability stack.
+
+- [ ] Expose Kubescape metrics dashboard in Grafana (Kubescape Prometheus scraping is already running from Phase 4.1)
+- [ ] Configure Tetragon JSON output → OTel Collector → Loki pipeline
+- [ ] Verify Tetragon security events are searchable in Loki
+- [ ] Verify Dependency-Track findings are visible alongside platform metrics in Grafana (via Prometheus exporter or Loki alerts)
+
 ---
 
 ## Phase 6 — Data platform
@@ -373,6 +384,9 @@ Order is strict within this phase.
 
 **Tooling:** Ansible (host) + OpenTofu (VM) + ArgoCD (operator)
 
+At this point the cluster has two nodes (talos-cp-01 + talos-worker-01) from Phase 2.
+talos-worker-gpu-01 is added here as a third node after host PCI passthrough is ready.
+
 ### 7.1 Configure PCI passthrough on host
 - [ ] Enable IOMMU in GRUB (intel_iommu=on)
 - [ ] Bind RTX 3070 Ti to vfio-pci driver (Ansible)
@@ -381,7 +395,7 @@ Order is strict within this phase.
 ### 7.2 Provision talos-worker-gpu-01
 - [ ] Provision VM via OpenTofu with GPU PCI passthrough config
 - [ ] Apply Talos machine config
-- [ ] Add node to cluster, verify it joins
+- [ ] Add node to existing cluster, verify it joins: `kubectl get nodes`
 
 ### 7.3 NVIDIA GPU Operator
 - [ ] Deploy NVIDIA GPU Operator via ArgoCD
@@ -426,7 +440,7 @@ Order is strict within this phase.
 - [ ] Enable secrets detection and security hotspot review
 
 ### 8.4 Dependency-Track (extended SCA)
-- [ ] Extend Phase 4.7 Dependency-Track with multi-project SBOM aggregation
+- [ ] Extend Phase 4.6 Dependency-Track with multi-project SBOM aggregation
 - [ ] Configure integration with SonarQube findings
 - [ ] Set up custom component license policies
 
