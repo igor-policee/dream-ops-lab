@@ -19,8 +19,8 @@ ansible-galaxy collection install -r requirements.yml
 Configure host-specific variables in `ansible/group_vars/homelab.yml`:
 
 ```yaml
-autossh_remote_user: <user on dev-ubuntu-01>      # replace
-autossh_remote_bind_port: <port on dev-ubuntu-01>  # replace
+autossh_remote_user: <user on dev-ubuntu-01> # replace
+autossh_remote_bind_port: <port on dev-ubuntu-01> # replace
 ```
 
 Ensure the SSH key `/root/.ssh/id_ed25519` is authorized on dev-ubuntu-01:
