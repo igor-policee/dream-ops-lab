@@ -199,12 +199,11 @@ Order is strict within this phase.
 > can start syncing immediately once ArgoCD begins managing them.
 
 - [ ] Retrieve ESO AppRole credentials from OpenBao (role_id + secret_id for `k8s-app` policy)
-- [ ] Create bootstrap K8s secret with AppRole credentials:
+- [ ] Create ESO auth K8s secret — this secret is permanent; ClusterSecretStore reads AppRole credentials from it via secretRef at runtime:
   `kubectl create secret generic openbao-approle --from-literal=role-id=<id> --from-literal=secret-id=<id> -n external-secrets`
 - [ ] Deploy External Secrets Operator via Helm
-- [ ] Create ClusterSecretStore pointing to openbao-01 using the bootstrap secret
+- [ ] Create ClusterSecretStore pointing to openbao-01 referencing the ESO auth secret
 - [ ] Verify secret sync with a test ExternalSecret
-- [ ] Delete bootstrap secret after ESO is operational (ESO manages its own auth from this point)
 
 ### 3.6 Create App-of-Apps
 - [ ] Create App-of-Apps root application in ArgoCD pointing to infrastructure repo
@@ -217,7 +216,7 @@ Order is strict within this phase.
 
 ### 3.8 Phase 3 security checkpoint
 
-- [ ] Verify all platform services have TLS (cert-manager issued certificates from step-ca)
+- [ ] Verify all core Phase 3 services have TLS (cert-manager issued certificates from step-ca)
 - [ ] Verify ArgoCD uses OIDC or SSO — no local admin password in use
 - [ ] Verify Cilium NetworkPolicy denies all pod-to-pod traffic by default (default-deny baseline)
 - [ ] Run Kubescape scan against NSA/CISA framework: `kubescape scan framework nsa`
@@ -239,9 +238,9 @@ Order is strict within this phase.
 
 - [ ] Deploy Kubescape operator via ArgoCD
 - [ ] Run NSA/CISA and CIS benchmark scans
-- [ ] Configure continuous scanning with results stored in Prometheus metrics
+- [ ] Configure continuous scanning and create ServiceMonitor manifest for Prometheus scraping
 - [ ] Fix all CRITICAL findings before proceeding to 4.2
-- [ ] Note: Grafana dashboard integration completed in Phase 5.8 after observability stack is up
+- [ ] Note: Prometheus scraping activation and Grafana dashboard completed in Phase 5.8 after observability stack is up
 
 ### 4.2 Trivy in CI pipeline
 
@@ -348,7 +347,7 @@ Order is strict within this phase.
 ### 5.8 Security-observability integration
 > Complete Phase 4 items that depend on the observability stack.
 
-- [ ] Expose Kubescape metrics dashboard in Grafana (Kubescape Prometheus scraping is already running from Phase 4.1)
+- [ ] Enable Kubescape Prometheus scraping (ServiceMonitor created in Phase 4.1) and build Grafana dashboard
 - [ ] Configure Tetragon JSON output → OTel Collector → Loki pipeline
 - [ ] Verify Tetragon security events are searchable in Loki
 - [ ] Verify Dependency-Track findings are visible alongside platform metrics in Grafana (via Prometheus exporter or Loki alerts)

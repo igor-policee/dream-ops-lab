@@ -59,10 +59,10 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 32. **Databases** — CloudNativePG (PostgreSQL), Altinity clickhouse-operator (ClickHouse)
 
 **Security and supply chain layer (2026-06-25):**
-33. **Secret scanning** — Gitleaks (pre-commit + CI), Checkov (IaC), baseline in Phase 0.6
-34. **Posture management** — Kubescape (Phase 4.1, NSA/CISA + CIS, continuous + Grafana dashboard)
-35. **Image signing** — Cosign (Phase 4.5), key in OpenBao, enforced via Kyverno verifyImages
-36. **SBOM + SCA** — Syft (CycloneDX) + Dependency-Track (Phase 4.7, NVD/OSV feeds, CI gate)
+33. **Secret scanning** — Gitleaks (pre-commit + CI), Checkov (IaC), baseline in Phase 0.0
+34. **Posture management** — Kubescape (Phase 4.1, NSA/CISA + CIS; Grafana dashboard in Phase 5.8)
+35. **Image signing** — Cosign (Phase 4.4), key in OpenBao, enforced via Kyverno verifyImages
+36. **SBOM + SCA** — Syft (CycloneDX) + Dependency-Track (Phase 4.6, NVD/OSV feeds, CI gate)
 37. **Threat model** — living document updated at each phase security checkpoint
 38. **Supply chain** — documented in supply-chain-security.md (SLSA Level 2 target)
 

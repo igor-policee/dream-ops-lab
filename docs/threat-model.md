@@ -87,8 +87,8 @@ CA key passphrase stored in Bitwarden only.
 |-------|-----------|--------|
 | Phase 1 | 1.7 security checkpoint | Not started |
 | Phase 2 | 2.4 kube-bench baseline | Not started |
-| Phase 3 | 3.6 Kubescape baseline, network model | Not started |
-| Phase 4 | 4.8 runtime security coverage | Not started |
+| Phase 3 | 3.8 Kubescape baseline, network model | Not started |
+| Phase 4 | 4.7 runtime security coverage | Not started |
 
 ## Residual risks
 
