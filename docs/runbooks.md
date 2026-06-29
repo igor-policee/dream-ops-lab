@@ -16,18 +16,22 @@ cd ansible/
 ansible-galaxy collection install -r requirements.yml
 ```
 
-Configure host-specific variables in `ansible/group_vars/homelab.yml`:
-
-```yaml
-autossh_remote_user: <user on dev-ubuntu-01> # replace
-autossh_remote_bind_port: <port on dev-ubuntu-01> # replace
-```
-
-Ensure the SSH key `/root/.ssh/id_ed25519` is authorized on dev-ubuntu-01:
+Generate an SSH key on homelab-ubuntu for the autossh tunnel (as root):
 
 ```bash
-ssh-copy-id -i /root/.ssh/id_ed25519.pub <user>@dev-ubuntu-01
+sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519_dev-ubuntu-01 -N "" -C "autossh@homelab-ubuntu"
 ```
+
+Add the public key to `/root/.ssh/authorized_keys` on dev-ubuntu-01.
+
+Verify connectivity:
+
+```bash
+sudo ssh -i /root/.ssh/id_ed25519_dev-ubuntu-01 -p 22 root@dev-ubuntu-01 "hostname"
+```
+
+All playbooks require sudo on the remote host. Use `-K` to prompt for the
+become password.
 
 ---
 
@@ -61,7 +65,7 @@ vgdisplay ubuntu-vg | grep "Free  PE"
 > **Destructive.** Destroys all running libvirt VMs. Confirm VM state before running.
 
 ```bash
-ansible-playbook phase-0.yml -e libvirt_removal=true --tags libvirt_removal
+ansible-playbook phase-0.yml -e libvirt_removal=true --tags libvirt_removal -K
 ```
 
 Verify after completion:
@@ -76,7 +80,7 @@ which qemu-system-x86_64  # qemu-kvm must still be present
 ### Phase 0.2–0.4 — Install and configure Incus
 
 ```bash
-ansible-playbook phase-0.yml --tags incus
+ansible-playbook phase-0.yml --tags incus -K
 ```
 
 Verify:
@@ -93,7 +97,7 @@ zpool status incus-pool       # ONLINE
 ### Phase 0.5 — Configure autossh reverse tunnel
 
 ```bash
-ansible-playbook phase-0.yml --tags autossh
+ansible-playbook phase-0.yml --tags autossh -K
 ```
 
 Verify:
@@ -110,7 +114,7 @@ ssh -p <autossh_remote_bind_port> root@localhost  # should reach homelab-ubuntu
 ### Run all of Phase 0 (except libvirt removal)
 
 ```bash
-ansible-playbook phase-0.yml
+ansible-playbook phase-0.yml -K
 ```
 
 ---

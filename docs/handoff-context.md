@@ -2,14 +2,14 @@
 
 ## Current State
 
-Architecture and stack discussion complete. No infrastructure has been deployed.
-The repository contains documentation, Go tooling source code, and Phase 0 Ansible
-playbooks (host preparation).
+Architecture and stack discussion complete. Phase 0 (host preparation) executed
+and verified on the physical host.
 
-**Physical host status:** Ubuntu 24.04.4 LTS (kernel 6.8.0-110-generic), libvirt fully
-installed and active. 4 VMs currently running on libvirt — must be stopped and removed
-before Incus installation. ~828 GB free in the Ubuntu LVM VG — to be used as Incus
-storage pool. Windows dual-boot on nvme0n1 — do not touch.
+**Physical host status:** Ubuntu 24.04.4 LTS (kernel 6.8.0-110-generic). libvirt
+removed, Incus installed (Zabbly repo), ZFS pool `incus-pool` on LVM LV `incus-zfs`
+(~800 GB from ubuntu-vg), incusbr0 bridge active (10.10.0.1/24, NAT). autossh
+reverse tunnel to dev-ubuntu-01 running as systemd service. Windows dual-boot on
+nvme0n1 — do not touch.
 
 ## What Was Decided
 
@@ -86,23 +86,18 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 
 ## Next Steps
 
-Implementation has begun. Phase 0 Ansible playbooks are written and ready to run.
-See [roadmap.md](roadmap.md) for full phase breakdown.
+Phase 0 complete. See [roadmap.md](roadmap.md) for full phase breakdown.
 
-**Phase 0 — ready to execute:**
+**Phase 0 — completed (2026-06-29):**
 
-- [ ] 0.0 Pre-flight: run `pre-commit install`, `checkov -d .`, verify LVM free space
-- [ ] 0.1 Libvirt removal: `ansible-playbook phase-0.yml -e libvirt_removal=true`
-- [ ] 0.2–0.4 Incus install + ZFS + network: `ansible-playbook phase-0.yml --tags incus`
-- [ ] 0.5 autossh tunnel: `ansible-playbook phase-0.yml --tags autossh`
+- [x] 0.0 Pre-flight: pre-commit hooks, gitleaks, checkov
+- [x] 0.1 Libvirt removal: 4 VMs destroyed, libvirt packages purged
+- [x] 0.2–0.4 Incus install + ZFS pool + preseed init
+- [x] 0.5 autossh reverse tunnel to dev-ubuntu-01
 
-**Before first run:**
+All phases verified idempotent. See [runbooks.md](runbooks.md) for commands.
 
-1. Set `autossh_remote_user` and `autossh_remote_bind_port` in `ansible/group_vars/homelab.yml`
-2. Verify SSH key `/root/.ssh/id_ed25519` is authorized on dev-ubuntu-01
-3. Install Ansible collections: `ansible-galaxy collection install -r ansible/requirements.yml`
-
-**Remaining phases:**
+**Next phases:**
 
 - [ ] Phase 1 — Pre-K8s VMs (step-ca-01, openbao-01, gitlab-01)
 - [ ] Phase 2 — Kubernetes cluster (talos nodes, bootstrap)
@@ -141,4 +136,4 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 
 ## Validation Status
 
-> Not validated — no infrastructure deployed yet.
+> Phase 0 validated — all playbooks executed on homelab-ubuntu, idempotency confirmed (2026-06-29).

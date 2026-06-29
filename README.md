@@ -54,4 +54,4 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Status
 
-> Phase 0 Ansible playbooks implemented (Incus, ZFS, autossh). No infrastructure deployed yet — ready to run Phase 0 on the physical host.
+> Phase 0 complete — host prepared (libvirt removed, Incus + ZFS + autossh deployed and verified). Ready for Phase 1.
