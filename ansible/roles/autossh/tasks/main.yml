@@ -1,0 +1,22 @@
+# Phase 0.5 — Configure persistent reverse SSH tunnel to dev-ubuntu-01.
+# The tunnel allows remote access to this host through dev-ubuntu-01's public IP.
+
+- name: Install autossh
+  ansible.builtin.apt:
+    name: autossh
+    state: present
+    update_cache: true
+
+- name: Deploy autossh systemd service
+  ansible.builtin.template:
+    src: autossh.service.j2
+    dest: /etc/systemd/system/autossh-tunnel.service
+    mode: "0644"
+  notify: reload systemd
+
+- name: Enable and start autossh tunnel service
+  ansible.builtin.systemd:
+    name: autossh-tunnel
+    state: started
+    enabled: true
+    daemon_reload: true

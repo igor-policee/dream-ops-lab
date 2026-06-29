@@ -1,0 +1,20 @@
+# --- Incus storage ---
+incus_lv_vg: ubuntu-vg
+incus_lv_name: incus-zfs
+incus_lv_size: 800g
+incus_storage_pool_name: incus-pool
+
+# --- Incus network ---
+incus_bridge_name: incusbr0
+incus_bridge_cidr: 10.10.0.1/24
+incus_bridge_domain: dream.lab
+incus_uplink_iface: wlp5s0
+
+# --- autossh ---
+# Set these to match the dev-ubuntu-01 configuration.
+# autossh_remote_host and autossh_remote_user must be reachable via SSH
+# from this host using autossh_ssh_key.
+autossh_remote_host: dev-ubuntu-01
+autossh_remote_user: root
+autossh_remote_bind_port: 2222 # port on dev-ubuntu-01 that forwards to this host:22
+autossh_ssh_key: /root/.ssh/id_ed25519_dev-ubuntu-01

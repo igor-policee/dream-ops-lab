@@ -1,0 +1,47 @@
+# Phase 0.2 — Install Incus from the Zabbly repository.
+# Zabbly is maintained by Stéphane Graber (original LXD/Incus author).
+
+- name: Install required packages for apt key management
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Create Zabbly apt keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Zabbly apt signing key
+  ansible.builtin.get_url:
+    url: https://pkgs.zabbly.com/key.asc
+    dest: /etc/apt/keyrings/zabbly.asc
+    mode: "0644"
+    force: false
+
+- name: Add Zabbly apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/zabbly-incus-stable.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/zabbly.asc] https://pkgs.zabbly.com/incus/stable {{ ansible_facts['distribution_release'] }} main
+    mode: "0644"
+  notify: update apt cache
+
+- name: Flush handlers to update apt cache before installing
+  ansible.builtin.meta: flush_handlers
+
+- name: Install Incus packages
+  ansible.builtin.apt:
+    name:
+      - incus
+    state: present
+    update_cache: true
+
+- name: Ensure Incus daemon is running
+  ansible.builtin.systemd:
+    name: incus
+    state: started
+    enabled: true

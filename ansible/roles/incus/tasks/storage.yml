@@ -1,0 +1,26 @@
+# Phase 0.3 — Create LVM logical volume and ZFS pool for Incus storage.
+# The ZFS pool is created here; Incus adopts it by name during admin init.
+
+- name: Install ZFS utilities
+  ansible.builtin.apt:
+    name: zfsutils-linux
+    state: present
+
+- name: Create LVM logical volume for Incus ZFS pool
+  community.general.lvol:
+    vg: "{{ incus_lv_vg }}"
+    lv: "{{ incus_lv_name }}"
+    size: "{{ incus_lv_size }}"
+    state: present
+
+- name: Check if ZFS pool already exists
+  ansible.builtin.command: zpool list {{ incus_storage_pool_name }}
+  register: zpool_check
+  failed_when: false
+  changed_when: false
+
+- name: Create ZFS pool on the LVM logical volume
+  ansible.builtin.command: >
+    zpool create {{ incus_storage_pool_name }}
+    /dev/{{ incus_lv_vg }}/{{ incus_lv_name }}
+  when: zpool_check.rc != 0

@@ -1,0 +1,8 @@
+# Replace these values to match the dev-ubuntu-01 configuration.
+# autossh_remote_host and autossh_remote_user are set in group_vars/homelab.yml.
+autossh_local_port: 22
+autossh_ssh_opts: >-
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=3
+  -o ExitOnForwardFailure=yes
+  -o StrictHostKeyChecking=accept-new

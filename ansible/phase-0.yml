@@ -1,0 +1,88 @@
+---
+# Phase 0 — Host preparation
+# Run: ansible-playbook phase-0.yml
+#
+# Phase 0.1 (libvirt removal) is guarded by a variable and skipped by default.
+# To include it: ansible-playbook phase-0.yml -e libvirt_removal=true
+#
+# Phases 0.2–0.5 run unconditionally and are idempotent.
+
+- name: "Phase 0.1 — Remove libvirt stack"
+  hosts: homelab
+  tags: [libvirt_removal]
+  tasks:
+    - name: Abort unless explicitly confirmed
+      ansible.builtin.fail:
+        msg: >
+          Set -e libvirt_removal=true to run this play.
+          It will stop and destroy all libvirt VMs and remove libvirt packages.
+      when: not (libvirt_removal | default(false) | bool)
+
+    - name: List all running libvirt domains
+      ansible.builtin.command: virsh list --name
+      register: virsh_domains
+      changed_when: false
+      failed_when: false
+
+    - name: Destroy running libvirt VMs
+      ansible.builtin.command: virsh destroy {{ item }}
+      loop: "{{ virsh_domains.stdout_lines | select('ne', '') | list }}"
+      when: virsh_domains.rc == 0
+      failed_when: false
+
+    - name: Undefine all libvirt VMs (remove definitions)
+      ansible.builtin.command: virsh list --all --name
+      register: virsh_all
+      changed_when: false
+      failed_when: false
+
+    - name: Undefine each VM
+      ansible.builtin.command: virsh undefine {{ item }} --remove-all-storage
+      loop: "{{ virsh_all.stdout_lines | select('ne', '') | list }}"
+      when: virsh_all.rc == 0
+      failed_when: false
+
+    - name: Remove libvirt packages
+      ansible.builtin.apt:
+        name:
+          - libvirt-daemon-system
+          - libvirt-clients
+          - virt-manager
+          - virtinst
+        state: absent
+        purge: true
+        autoremove: true
+
+    - name: Verify kvm module is still loaded
+      ansible.builtin.command: lsmod
+      register: lsmod_output
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Assert kvm module is present
+      ansible.builtin.assert:
+        that: "'kvm' in lsmod_output.stdout"
+        fail_msg: "kvm kernel module is missing — check qemu-kvm installation"
+      when: not ansible_check_mode
+
+    - name: Verify qemu-kvm binary is present
+      ansible.builtin.stat:
+        path: /usr/bin/qemu-system-x86_64
+      register: qemu_stat
+
+    - name: Assert qemu-kvm is installed
+      ansible.builtin.assert:
+        that: qemu_stat.stat.exists
+        fail_msg: "qemu-system-x86_64 not found — install qemu-kvm"
+
+- name: "Phase 0.2–0.4 — Install and configure Incus"
+  hosts: homelab
+  tags: [incus]
+  roles:
+    - incus
+
+- name: "Phase 0.5 — Configure autossh reverse tunnel"
+  hosts: homelab
+  tags: [autossh]
+  roles:
+    - autossh

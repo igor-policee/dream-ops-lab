@@ -1,0 +1,20 @@
+[Unit]
+Description=Reverse SSH tunnel to {{ autossh_remote_host }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+# AUTOSSH_GATETIME=0: do not abort if the first connection fails (e.g. on boot)
+Environment=AUTOSSH_GATETIME=0
+ExecStart=/usr/bin/autossh -M 0 -N \
+    -R {{ autossh_remote_bind_port }}:localhost:{{ autossh_local_port }} \
+    -i {{ autossh_ssh_key }} \
+    {{ autossh_ssh_opts }} \
+    {{ autossh_remote_user }}@{{ autossh_remote_host }}
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

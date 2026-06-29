@@ -1,0 +1,34 @@
+config: {}
+
+storage_pools:
+  - name: {{ incus_storage_pool_name }}
+    driver: zfs
+    config:
+      # Adopt the ZFS pool created by the storage.yml task.
+      source: {{ incus_storage_pool_name }}
+
+networks:
+  - name: {{ incus_bridge_name }}
+    type: bridge
+    project: default
+    config:
+      ipv4.address: {{ incus_bridge_cidr }}
+      ipv4.nat: "true"
+      ipv4.dhcp: "true"
+      ipv6.address: none
+      dns.domain: {{ incus_bridge_domain }}
+
+profiles:
+  - name: default
+    config: {}
+    devices:
+      root:
+        type: disk
+        path: /
+        pool: {{ incus_storage_pool_name }}
+      eth0:
+        type: nic
+        name: eth0
+        network: {{ incus_bridge_name }}
+
+cluster: null

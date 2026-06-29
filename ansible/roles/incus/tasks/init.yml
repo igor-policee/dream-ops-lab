@@ -1,0 +1,36 @@
+# Phase 0.2 / 0.3 / 0.4 — Initialize Incus via preseed.
+# The preseed adopts the pre-created ZFS pool (incus-pool) and creates incusbr0.
+# Incus manages NAT and IP forwarding automatically when ipv4.nat=true.
+
+- name: Check if Incus is already initialized
+  ansible.builtin.command: incus info
+  register: incus_info
+  changed_when: false
+  failed_when: false
+
+- name: Check if default profile already has storage configured
+  ansible.builtin.command: incus profile show default
+  register: incus_profile
+  changed_when: false
+  failed_when: false
+
+- name: Determine if init is needed
+  ansible.builtin.set_fact:
+    incus_needs_init: >-
+      {{ 'incus-pool' not in (incus_profile.stdout | default('')) }}
+
+- name: Render preseed configuration
+  ansible.builtin.template:
+    src: preseed.yml.j2
+    dest: /tmp/incus-preseed.yml
+    mode: "0600"
+  when: incus_needs_init
+
+- name: Run incus admin init with preseed
+  ansible.builtin.shell: incus admin init --preseed < /tmp/incus-preseed.yml
+  when: incus_needs_init
+
+- name: Remove preseed file
+  ansible.builtin.file:
+    path: /tmp/incus-preseed.yml
+    state: absent
