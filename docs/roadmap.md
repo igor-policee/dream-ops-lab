@@ -492,7 +492,7 @@ talos-worker-gpu-01 is added here as a third node after host PCI passthrough is 
 
 ### 8.2 Go tool: OpenBao secret rotator
 
-> Implemented in Phase 4.9. This entry tracks extended enhancements.
+> Core tool deployed in Phase 4.9. This entry tracks post-deployment enhancements.
 
 - [ ] Add dry-run mode: `bao-rotator rotate --dry-run <mount> <path>`
 - [ ] Add AppRole authentication support (currently token-based only)
