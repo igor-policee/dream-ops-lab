@@ -27,7 +27,7 @@ Kubernetes cluster on top. All layers follow an immutable, API-driven approach.
 
 Incus replaces libvirt. The kvm kernel module and qemu-kvm are retained — used by Incus directly.
 
-Current state: libvirt fully installed and running, 4 VMs active. Must be shut down and removed before Incus installation.
+Current state: libvirt removed, Incus installed and initialized (Phase 0 complete, 2026-06-29).
 
 ## Incus
 

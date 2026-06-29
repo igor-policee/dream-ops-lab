@@ -40,19 +40,18 @@ repos:
       - id: checkov
         args: [--soft-fail]
 
-  # ── IaC: Terraform / Helm / Kubernetes ───────────────────────────────────
+  # ── IaC: OpenTofu / Helm / Kubernetes ─────────────────────────────────────
+  # Requires TERRAFORM_BINARY=tofu in the environment (e.g. shell profile or .envrc)
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.105.0
     hooks:
-      # Format .tf files according to Terraform style conventions
+      # Format .tf files using OpenTofu
       - id: terraform_fmt
 
-      # Run `terraform validate` in each module directory
-      # Requires initialized Terraform (run `terraform init` first)
+      # Run `tofu validate` in each module directory
       - id: terraform_validate
 
       # Auto-generate README docs for modules using terraform-docs
-      # Keeps documentation up-to-date without manual effort
       - id: terraform_docs
         args:
           - --hook-config=--path-to-file=README.md

@@ -11,56 +11,54 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 0.0 Pre-flight
 
-> **Must complete before any host configuration changes.**
+> Completed 2026-06-29.
 
-**Backup and rollback**
-
-- [ ] Confirm backup boundary and risk acceptance: critical secrets and GitLab are backed up; synthetic K8s data is not; risk accepted for lab environment (see Risks in [handoff-context.md](handoff-context.md))
-- [ ] Verify Windows dual-boot (nvme0n1) is not affected by planned changes
-- [ ] Document rollback plan for libvirt removal (snapshot or note current VM state)
-- [ ] Confirm ~828 GB LVM free space is available: `vgdisplay ubuntu-vg`
-
-**Security baseline**
-
-- [ ] Install pre-commit framework: `pipx install pre-commit`
-- [ ] Create `.pre-commit-config.yaml` in infra repo with Gitleaks hook
-- [ ] Run `pre-commit install` — all future commits checked for secrets automatically
-- [ ] Install Checkov: `pipx install checkov`
-- [ ] Run initial Checkov scan on existing IaC files (if any): `checkov -d .`
-- [ ] Document findings in `docs/security-baseline.md` (even if zero findings — establishes a baseline)
-- [ ] Add `.gitleaks.toml` allowlist for known false positives (age key references, example tokens)
+- [x] Confirm backup boundary and risk acceptance
+- [x] Verify Windows dual-boot (nvme0n1) is not affected
+- [x] Confirm ~828 GB LVM free space: `vgdisplay ubuntu-vg`
+- [x] Install pre-commit + Checkov, create `.pre-commit-config.yaml` and `.gitleaks.toml`
+- [x] Run `pre-commit install` and `pre-commit run --all-files`
 
 ### 0.1 Remove libvirt stack
 
-- [ ] Stop and destroy all 4 running libvirt VMs
-- [ ] Purge libvirt, libvirtd, virt-manager, virtinst packages
-- [ ] Verify kvm kernel module and qemu-kvm are still present
+> Completed 2026-06-29. Ansible: `ansible-playbook phase-0.yml --tags libvirt_removal -K`
+
+- [x] Stop and destroy all 4 running libvirt VMs
+- [x] Purge libvirt, virt-manager, virtinst packages
+- [x] Verify kvm kernel module and qemu-kvm are still present
 
 ### 0.2 Install Incus
 
-- [ ] Add Zabbly apt repository
-- [ ] Install incus, incus-base packages
-- [ ] Run `incus admin init` (non-interactive, via Ansible)
+> Completed 2026-06-29. Ansible: `ansible-playbook phase-0.yml --tags incus -K`
+
+- [x] Add Zabbly apt repository
+- [x] Install incus package
+- [x] Run `incus admin init` (preseed via Ansible)
 
 ### 0.3 Configure ZFS storage pool
 
-- [ ] Create LVM logical volume in ubuntu-vg (~800 GB)
-- [ ] Create ZFS pool: `zpool create incus-pool /dev/ubuntu-vg/incus-zfs`
-- [ ] Register pool as Incus storage backend
+> Completed 2026-06-29 (same playbook as 0.2).
+
+- [x] Create LVM logical volume in ubuntu-vg (~800 GB)
+- [x] Create ZFS pool on `/dev/ubuntu-vg/incus-zfs`
+- [x] Register pool as Incus storage backend via preseed
 
 ### 0.4 Configure networking
 
-- [ ] Create incusbr0 bridge (10.10.0.0/24)
-- [ ] Set Incus bridge DNS domain to `dream.lab`
-- [ ] Enable IP forwarding
-- [ ] Configure NAT (nftables/iptables) from incusbr0 → wlp5s0
+> Completed 2026-06-29 (same playbook as 0.2).
+
+- [x] Create incusbr0 bridge (10.10.0.1/24)
+- [x] Set Incus bridge DNS domain to `dream.lab`
+- [x] NAT configured via Incus native ipv4.nat=true
 
 ### 0.5 Configure remote access
 
-- [ ] Install autossh
-- [ ] Create systemd service for reverse SSH tunnel to dev-ubuntu-01
-- [ ] Enable and start service
-- [ ] Verify SSH access through dev-ubuntu-01 → host
+> Completed 2026-06-29. Ansible: `ansible-playbook phase-0.yml --tags autossh -K`
+
+- [x] Install autossh
+- [x] Create systemd service for reverse SSH tunnel to dev-ubuntu-01
+- [x] Enable and start service
+- [x] Verify SSH access through dev-ubuntu-01 → host
 
 ---
 
