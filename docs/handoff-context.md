@@ -102,8 +102,7 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 - [x] OpenTofu base module created (`infra/modules/vm/`)
 - [x] Incus provider `lxc/incus` v0.5.1 via filesystem mirror
 - [x] `tofu init` successful on homelab-ubuntu
-- [x] step-ca-01 VM definition ready (`infra/step-ca.tf`)
-- [ ] `tofu plan` and `tofu apply` for step-ca-01
+- [x] step-ca-01 VM provisioned (10.10.0.10, running, idempotent)
 - [ ] age key pair generation and Bitwarden storage
 - [ ] Manual tfstate backup after first apply
 
@@ -146,4 +145,4 @@ See [roadmap.md](roadmap.md) for full phase breakdown.
 ## Validation Status
 
 > Phase 0 validated — all playbooks executed on homelab-ubuntu, idempotency confirmed (2026-06-29).
-> Phase 1.1 partially validated — `tofu init` successful on host, provider mirror working.
+> Phase 1.1 partially validated — step-ca-01 VM provisioned, idempotency confirmed. age keys and tfstate backup pending.

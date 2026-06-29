@@ -54,4 +54,4 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Status
 
-> Phase 0 complete. Phase 1 in progress — OpenTofu base module created, provider mirror configured, first VM (step-ca-01) ready for provisioning.
+> Phase 0 complete. Phase 1 in progress — step-ca-01 VM provisioned (10.10.0.10), next: step-ca PKI configuration.

@@ -131,6 +131,14 @@ sudo usermod -aG incus-admin ipolishchuk
 
 Re-login or use `sg incus-admin -c '<command>'` to activate the group.
 
+Dev machine tools required for pre-commit hooks:
+
+```bash
+go install github.com/terraform-docs/terraform-docs@latest
+```
+
+Ensure `~/go/bin` is in PATH (`export PATH="$HOME/go/bin:$PATH"` in `~/.bashrc`).
+
 ### OpenTofu provider mirror
 
 The OpenTofu registry is blocked from Russia. Providers are downloaded on the dev
