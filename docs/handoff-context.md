@@ -2,14 +2,15 @@
 
 ## Current State
 
-Architecture and stack discussion complete. Phase 0 (host preparation) executed
-and verified on the physical host.
+Phase 0 complete, Phase 1.1 in progress. OpenTofu base module created, provider
+mirror configured, `tofu init` successful on the host.
 
 **Physical host status:** Ubuntu 24.04.4 LTS (kernel 6.8.0-110-generic). libvirt
-removed, Incus installed (Zabbly repo), ZFS pool `incus-pool` on LVM LV `incus-zfs`
-(~800 GB from ubuntu-vg), incusbr0 bridge active (10.10.0.1/24, NAT). autossh
-reverse tunnel to dev-ubuntu-01 running as systemd service. Windows dual-boot on
-nvme0n1 — do not touch.
+removed, Incus 7.2 installed (Zabbly repo), ZFS pool `incus-pool` on LVM LV
+`incus-zfs` (~800 GB from ubuntu-vg), incusbr0 bridge active (10.10.0.1/24, NAT).
+autossh reverse tunnel to dev-ubuntu-01 running as systemd service. OpenTofu 1.12.1
+installed, `lxc/incus` provider v0.5.1 available via filesystem mirror. Windows
+dual-boot on nvme0n1 — do not touch.
 
 ## What Was Decided
 
@@ -82,42 +83,50 @@ Bottom-up architecture discussion completed. See [decisions.md](decisions.md) fo
 40. **bao-rotator** — custom Go CLI (`tools/bao-rotator/`); list/rotate/audit commands for KV v2; 90-day rotation threshold; deployed as CronJob in Phase 4.9; slog-structured output
 41. **Security posture dashboard** — Phase 5.9; Grafana dashboard aggregating dream-checker, Kubescape, Tetragon, Dependency-Track findings from Loki/Prometheus
 
+**Infrastructure provisioning (2026-06-29):**
+
+42. **VM OS** — Ubuntu 24.04 LTS cloud images for pre-K8s VMs (step-ca-01, openbao-01, gitlab-01); matches host OS
+43. **OpenTofu provider mirror** — filesystem mirror for `lxc/incus` provider; registry blocked from RU, providers downloaded on dev machine (VPN) and rsync'd to host
+44. **Bootstrap deployment** — rsync `infra/` to host, `tofu` runs locally via Unix socket; transitions to GitLab after Phase 1.4
+
 <!-- prettier-ignore-end -->
 
 ## Next Steps
 
-Phase 0 complete. See [roadmap.md](roadmap.md) for full phase breakdown.
+See [roadmap.md](roadmap.md) for full phase breakdown.
 
-**Phase 0 — completed (2026-06-29):**
+**Phase 0 — completed (2026-06-29).** All verified idempotent.
 
-- [x] 0.0 Pre-flight: pre-commit hooks, gitleaks, checkov
-- [x] 0.1 Libvirt removal: 4 VMs destroyed, libvirt packages purged
-- [x] 0.2–0.4 Incus install + ZFS pool + preseed init
-- [x] 0.5 autossh reverse tunnel to dev-ubuntu-01
+**Phase 1.1 — in progress:**
 
-All phases verified idempotent. See [runbooks.md](runbooks.md) for commands.
+- [x] OpenTofu base module created (`infra/modules/vm/`)
+- [x] Incus provider `lxc/incus` v0.5.1 via filesystem mirror
+- [x] `tofu init` successful on homelab-ubuntu
+- [x] step-ca-01 VM definition ready (`infra/step-ca.tf`)
+- [ ] `tofu plan` and `tofu apply` for step-ca-01
+- [ ] age key pair generation and Bitwarden storage
+- [ ] Manual tfstate backup after first apply
 
-**Next phases:**
+**Remaining phases:**
 
-- [ ] Phase 1 — Pre-K8s VMs (step-ca-01, openbao-01, gitlab-01)
-- [ ] Phase 2 — Kubernetes cluster (talos nodes, bootstrap)
-- [ ] Phase 3 — K8s core (Cilium, CoreDNS, cert-manager, ArgoCD)
-- [ ] Phase 4 — Security and policy
-- [ ] Phase 5 — Observability
-- [ ] Phase 6 — Data platform
-- [ ] Phase 7 — GPU workloads
-- [ ] Phase 8 — Optional (AmneziaWG, bao-rotator enhancements, SonarQube, Keycloak, Velero, Chaos Mesh, Backstage)
+- [ ] Phase 1.2 — Provision and configure step-ca-01
+- [ ] Phase 1.3 — Provision and configure openbao-01
+- [ ] Phase 1.4 — Provision and configure gitlab-01
+- [ ] Phase 1.5 — Backup automation
+- [ ] Phase 1.6 — DNS configuration
+- [ ] Phase 1.7 — Phase 1 security checkpoint
+- [ ] Phases 2–8 — see roadmap
 
 ## Documentation Status
 
 | Document                    | Status                                                                                                                 |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| README.md                   | Current — status reflects Phase 0 Ansible implementation                                                               |
-| architecture.md             | Current — dev-ubuntu-01 added as named system element                                                                  |
+| README.md                   | Current — status reflects Phase 0 complete, ready for Phase 1                                                          |
+| architecture.md             | Current — VM OS column added, OpenTofu integration updated (provider mirror, rsync workflow)                           |
 | network-diagram.md          | Current — dev-ubuntu-01 referenced by hostname                                                                         |
-| roadmap.md                  | Current — Phase 4 expanded, security checkpoints, ESO Phase 3.5, GPU Phase 7, Phase 3.9/4.8/4.9/5.9 added for Go tools |
-| decisions.md                | Current — all major architectural decisions recorded; Hadolint added to DevSecOps tool table                           |
-| runbooks.md                 | Current — Phase 0 host preparation procedures added                                                                    |
+| roadmap.md                  | Current — Phase 0 marked complete (2026-06-29), Phase 1 tasks detailed                                                 |
+| decisions.md                | Current — Ubuntu 24.04 VMs, provider mirror, rsync deployment model added                                              |
+| runbooks.md                 | Current — Phase 1 OpenTofu workflow added (mirror, rsync, plan/apply)                                                  |
 | threat-model.md             | Current — skeleton with assets, trust boundaries, 4 threat scenarios; updated per phase                                |
 | supply-chain-security.md    | Current — SLSA L2 target, Gitleaks/Checkov/Trivy/Syft/Cosign/Dependency-Track pipeline                                 |
 | docs/tools/dream-checker.md | Current — full module reference, CI integration, CronJob setup                                                         |
@@ -126,14 +135,15 @@ All phases verified idempotent. See [runbooks.md](runbooks.md) for commands.
 
 ## Risks and Constraints
 
-| Risk                 | Notes                                                                                                                                                                                                                                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WiFi-only networking | NAT bridge mitigates; no L2 features available on uplink                                                                                                                                                                                                                                             |
-| Single physical host | No hardware redundancy; acceptable for training environment                                                                                                                                                                                                                                          |
-| DPI filtering (RU)   | WireGuard may be blocked; reverse SSH used instead; AmneziaWG deferred                                                                                                                                                                                                                               |
-| KVM stack migration  | libvirt removal must not break existing qemu-kvm before Incus is ready                                                                                                                                                                                                                               |
-| SSD failure          | GitLab data backed up to dev-ubuntu-01 (automated, 3-day retention). All other VM data (PostgreSQL, ClickHouse, MinIO, Kafka) is synthetic/educational and recreatable from scratch. Talos OS layer is stateless and rebuilt from configs stored in OpenBao. Risk accepted for training environment. |
+| Risk                  | Notes                                                                                                                                                                                                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WiFi-only networking  | NAT bridge mitigates; no L2 features available on uplink                                                                                                                                                                                                                                             |
+| Single physical host  | No hardware redundancy; acceptable for training environment                                                                                                                                                                                                                                          |
+| DPI filtering (RU)    | WireGuard may be blocked; reverse SSH used instead; AmneziaWG deferred                                                                                                                                                                                                                               |
+| Registry blocked (RU) | OpenTofu registry returns 403 from RU; mitigated by filesystem mirror (providers downloaded on dev machine with VPN)                                                                                                                                                                                 |
+| SSD failure           | GitLab data backed up to dev-ubuntu-01 (automated, 3-day retention). All other VM data (PostgreSQL, ClickHouse, MinIO, Kafka) is synthetic/educational and recreatable from scratch. Talos OS layer is stateless and rebuilt from configs stored in OpenBao. Risk accepted for training environment. |
 
 ## Validation Status
 
 > Phase 0 validated — all playbooks executed on homelab-ubuntu, idempotency confirmed (2026-06-29).
+> Phase 1.1 partially validated — `tofu init` successful on host, provider mirror working.

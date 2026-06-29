@@ -54,4 +54,4 @@ machine using an immutable, API-driven infrastructure philosophy.
 
 ## Status
 
-> Phase 0 complete — host prepared (libvirt removed, Incus + ZFS + autossh deployed and verified). Ready for Phase 1.
+> Phase 0 complete. Phase 1 in progress — OpenTofu base module created, provider mirror configured, first VM (step-ca-01) ready for provisioning.

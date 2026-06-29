@@ -65,7 +65,7 @@ vgdisplay ubuntu-vg | grep "Free  PE"
 > **Destructive.** Destroys all running libvirt VMs. Confirm VM state before running.
 
 ```bash
-ansible-playbook phase-0.yml -e libvirt_removal=true --tags libvirt_removal -K
+ansible-playbook phase-0.yml --tags libvirt_removal -K
 ```
 
 Verify after completion:
@@ -116,6 +116,68 @@ ssh -p <autossh_remote_bind_port> root@localhost  # should reach homelab-ubuntu
 ```bash
 ansible-playbook phase-0.yml -K
 ```
+
+---
+
+## VM Provisioning (Phase 1)
+
+### Prerequisites
+
+The user running `tofu` on homelab-ubuntu must be in the `incus-admin` group:
+
+```bash
+sudo usermod -aG incus-admin ipolishchuk
+```
+
+Re-login or use `sg incus-admin -c '<command>'` to activate the group.
+
+### OpenTofu provider mirror
+
+The OpenTofu registry is blocked from Russia. Providers are downloaded on the dev
+machine (with VPN) and synced to the host via a filesystem mirror.
+
+**Download/update providers (dev machine):**
+
+```bash
+cd ~/repo/dream-ops-lab/infra
+tofu init
+tofu providers mirror -platform=linux_amd64 ./mirror
+```
+
+**Deploy to host:**
+
+```bash
+rsync -av --delete ~/repo/dream-ops-lab/infra/ homelab-ubuntu-reverse:~/infra/
+```
+
+**Initialize on host (first time or after provider update):**
+
+```bash
+ssh -t homelab-ubuntu-reverse "cd ~/infra && TF_CLI_CONFIG_FILE=./.terraformrc sg incus-admin -c 'tofu init'"
+```
+
+### OpenTofu plan / apply workflow
+
+Always plan before apply. Run all tofu commands via `sg incus-admin` on the host:
+
+```bash
+# Plan
+ssh -t homelab-ubuntu-reverse "cd ~/infra && sg incus-admin -c 'tofu plan'"
+
+# Apply (after reviewing plan)
+ssh -t homelab-ubuntu-reverse "cd ~/infra && sg incus-admin -c 'tofu apply'"
+
+# Verify
+ssh -t homelab-ubuntu-reverse "sg incus-admin -c 'incus list'"
+```
+
+After each `tofu apply`, back up the state file (until Phase 1.4 GitLab migration):
+
+```bash
+ssh -t homelab-ubuntu-reverse "cd ~/infra && sg incus-admin -c 'tofu show'"
+```
+
+See "Manual tfstate Backup" section below for the full backup procedure.
 
 ---
 

@@ -49,20 +49,25 @@ ubuntu-vg (~828 GB free)
 
 ### OpenTofu integration
 
-OpenTofu manages Incus resources via the incus provider using a local Unix socket.
-No remote API or TLS configuration required.
+OpenTofu manages Incus resources via the `lxc/incus` provider using a local Unix
+socket. No remote API or TLS configuration required. The user running `tofu` must
+be in the `incus-admin` group.
+
+During bootstrap (before GitLab), `infra/` is deployed to the host via rsync from
+the dev machine. Providers are distributed via a filesystem mirror (OpenTofu
+registry is blocked from Russia). After Phase 1.4, code is pulled from GitLab.
 
 ### VM inventory
 
-| VM                  | vCPU   | RAM       | Disk       | Role                                                        |
-| ------------------- | ------ | --------- | ---------- | ----------------------------------------------------------- |
-| step-ca-01          | 1      | 1 GB      | 10 GB      | Internal PKI / CA — provisioned first                       |
-| openbao-01          | 1      | 2 GB      | 20 GB      | Secrets management — provisioned before K8s                 |
-| gitlab-01           | 4      | 6 GB      | 200 GB     | GitLab CE + Container Registry                              |
-| talos-cp-01         | 2      | 4 GB      | 100 GB     | Kubernetes control plane (single node)                      |
-| talos-worker-01     | 6      | 20 GB     | 200 GB     | Platform services                                           |
-| talos-worker-gpu-01 | 6      | 20 GB     | 200 GB     | Platform services + GPU workloads (RTX 3070 Ti passthrough) |
-| **Total**           | **20** | **53 GB** | **730 GB** |                                                             |
+| VM                  | OS              | vCPU   | RAM       | Disk       | Role                                                        |
+| ------------------- | --------------- | ------ | --------- | ---------- | ----------------------------------------------------------- |
+| step-ca-01          | Ubuntu 24.04    | 1      | 1 GB      | 10 GB      | Internal PKI / CA — provisioned first                       |
+| openbao-01          | Ubuntu 24.04    | 1      | 2 GB      | 20 GB      | Secrets management — provisioned before K8s                 |
+| gitlab-01           | Ubuntu 24.04    | 4      | 6 GB      | 200 GB     | GitLab CE + Container Registry                              |
+| talos-cp-01         | Talos Linux     | 2      | 4 GB      | 100 GB     | Kubernetes control plane (single node)                      |
+| talos-worker-01     | Talos Linux     | 6      | 20 GB     | 200 GB     | Platform services                                           |
+| talos-worker-gpu-01 | Talos Linux     | 6      | 20 GB     | 200 GB     | Platform services + GPU workloads (RTX 3070 Ti passthrough) |
+| **Total**           |                 | **20** | **53 GB** | **730 GB** |                                                             |
 
 Host budget: 64 GB RAM (11 GB reserve), ~828 GB disk (98 GB free), 16 threads.
 vCPU overcommit is intentional and acceptable for a lab environment.

@@ -853,3 +853,58 @@ No Ingress controller is deployed.
 - Gateway API CRDs must be installed before enabling Cilium Gateway API (Phase 3.7)
 - Less community tooling for edge cases than Ingress, but sufficient for all
   platform use cases
+
+---
+
+## 2026-06-29 — Ubuntu 24.04 LTS for pre-Kubernetes VMs
+
+**Decision:** Use Ubuntu 24.04 LTS cloud images for all pre-Kubernetes VMs
+(step-ca-01, openbao-01, gitlab-01).
+
+**Reason:** Matches the host OS — same Ansible modules, apt packages, paths,
+and conventions. GitLab CE, step-ca, and OpenBao all provide official .deb
+packages. Incus natively supports `images:ubuntu/24.04/cloud` with cloud-init.
+
+**Alternatives considered:** Debian 12 (lighter but diverges from host in
+package names and paths, creating unnecessary Ansible maintenance),
+Alpine (too minimal for GitLab CE).
+
+**Trade-offs:** Ubuntu is heavier than Debian/Alpine, but consistency with the
+host and first-class package support outweigh the disk overhead for 3 VMs.
+
+---
+
+## 2026-06-29 — OpenTofu provider filesystem mirror
+
+**Decision:** Use a local filesystem mirror for OpenTofu providers instead of
+fetching from registry.opentofu.org at apply time.
+
+**Reason:** The OpenTofu registry is blocked from Russia (HTTP 403). Providers
+are downloaded on the dev machine (which has VPN), then rsync'd to the host
+alongside the infra code. A `.terraformrc` file in the infra directory points
+OpenTofu to the local `./mirror` path.
+
+**Alternatives considered:** Public GitLab.com as a provider proxy; HTTPS proxy
+on the host; network-mirror protocol server.
+
+**Trade-offs:** Providers must be re-mirrored after version bumps. Adds a manual
+step but requires zero additional infrastructure.
+
+---
+
+## 2026-06-29 — rsync deployment model for bootstrap phase
+
+**Decision:** During bootstrap (Phase 1, before GitLab exists), deploy `infra/`
+to the host via rsync and run `tofu` locally on homelab-ubuntu.
+
+**Reason:** OpenTofu connects to Incus via a local Unix socket — no remote API
+is exposed. The code must be on the host. GitLab is not available yet, so
+git-based deployment is not an option. rsync is simple and requires no extra
+infrastructure.
+
+**Alternatives considered:** Exposing Incus remote API with TLS (adds attack
+surface and PKI complexity before step-ca exists); running tofu on the dev
+machine via SSH tunnel (fragile, complicates provider auth).
+
+**Trade-offs:** Manual rsync step before each apply. Transitions to git pull or
+CI pipeline after GitLab is operational (Phase 1.4).
