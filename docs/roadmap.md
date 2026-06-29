@@ -68,18 +68,23 @@ the next begins. Order within a phase is sequential where noted.
 
 ### 1.1 OpenTofu base module
 
+> Partially completed 2026-06-29.
+
+- [x] Write reusable OpenTofu module for Incus VM (CPU, RAM, disk, static IP, cloud-init)
+- [x] Use local state backend — GitLab is not yet available at this stage
+- [x] Configure filesystem mirror for `lxc/incus` provider (registry blocked from RU)
 - [ ] Install `age` on host
 - [ ] Generate age key pair: `age-keygen -o /root/.age-backup.key` (mode 0400)
 - [ ] Store age private key in Bitwarden as secure note "dream-ops-lab age backup key"
 - [ ] Shred the private key file: `shred -u /root/.age-backup.key`
 - [ ] Create tfstate backup directory on dev-ubuntu-01: `mkdir -p ~/backups/dream-ops-lab/tfstate`
-- [ ] Write reusable OpenTofu module for Incus VM (CPU, RAM, disk, network, cloud-init)
-- [ ] Use local state backend — GitLab is not yet available at this stage
 - [ ] Run a manual tfstate backup after each `tofu apply` until Phase 1.4 is complete (see "Manual tfstate Backup" in [runbooks.md](runbooks.md))
 
 ### 1.2 Provision and configure step-ca-01
 
-- [ ] Provision VM via OpenTofu
+> VM provisioned 2026-06-29. Configuration pending.
+
+- [x] Provision VM via OpenTofu (10.10.0.10, Ubuntu 24.04, 1 vCPU, 1GB RAM, 10GB disk)
 - [ ] Install step-ca (Ansible)
 - [ ] Initialize PKI: generate root CA and intermediate CA
 - [ ] Configure ACME provisioner (HTTP challenge via internal network)
